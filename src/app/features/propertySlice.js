@@ -40,7 +40,7 @@ export const fetchProperties = () => async (dispatch) => {
     const response = await axios.get('https://prop-backend.vercel.app/v1/property/getProperties');
 
     dispatch(setProperties(response.data.data));
-
+    return response.data.data;
   } catch (error) {
     dispatch(setError(error.message));
     dispatch(setLoading(false));
@@ -49,10 +49,9 @@ export const fetchProperties = () => async (dispatch) => {
 
 export const fetchPropertyById = (id) => async (dispatch) => {
   try {
-    dispatch(setLoading(true));
     const response = await axios.get(`https://prop-backend.vercel.app/v1/property/getPropertyById/${id}`);
     dispatch(setSelectedProperty(response.data.data));
-    dispatch(setLoading(false));
+    return response.data.data;
   } catch (error) {
     dispatch(setError(error.message));
     dispatch(setLoading(false));
@@ -68,6 +67,7 @@ export const updateProperty = (id, updatedProperty) => async (dispatch) => {
       },
     });
     fetchProperties();
+    return response.data.data;
   } catch (error) {
     dispatch(setError(error.message));
     dispatch(setLoading(false));
@@ -78,6 +78,7 @@ export const deleteProperty = (propertyId) => async (dispatch) => {
   try {
     const response = await axios.delete(`https://prop-backend.vercel.app/v1/property/deleteProperty/${propertyId}`);
     fetchProperties();
+    return response.data.data;
   } catch (error) {
     dispatch(setError(error.message));
     dispatch(setLoading(false));
@@ -86,12 +87,14 @@ export const deleteProperty = (propertyId) => async (dispatch) => {
 
 export const createProperty = (newProperty) => async (dispatch) => {
   try {
-    const response = await axios.post('https://prop-backend.vercel.app/v1/property/createProperty', newProperty, {
+    const response = await axios.post('https://prop-backend.vercel.app/v1/property/newProperty', newProperty, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
+    
     fetchProperties();
+    return response.data.data;
   } catch (error) {
     dispatch(setError(error.message));
     dispatch(setLoading(false));
