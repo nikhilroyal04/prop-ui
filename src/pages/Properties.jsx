@@ -286,12 +286,14 @@ export default function Properties() {
             <CardBody display="flex" flexDirection="column" overflow={["visible", "visible", "hidden"]}>
               <Flex justify="space-between" align="center" mb={4}>
                 <Heading size="md">Properties ({properties?.length || 0})</Heading>
-                <Text>
-                  Property {currentPropertyIndex + 1} of {properties.length}
-                </Text>
+                {properties.length > 0 && (
+                  <Text>
+                    Property {currentPropertyIndex + 1} of {properties.length}
+                  </Text>
+                )}
               </Flex>
 
-              {properties.length > 0 && (
+              {properties.length > 0 ? (
                 <Box flex="1" overflow={["visible", "visible", "auto"]}>
                   <Card variant="outline">
                     <CardBody>
@@ -510,40 +512,52 @@ export default function Properties() {
                     </CardBody>
                   </Card>
                 </Box>
+              ) : (
+                <Box flex="1" overflow={["visible", "visible", "auto"]}>
+                  <Card variant="outline" height="full">
+                    <CardBody display="flex" alignItems="center" justifyContent="center" flexDirection="column" gap={4}>
+                      <Building size={60} color="gray" />
+                      <Heading size="md" color="gray.500">No Properties Found</Heading>
+                      <Text color="gray.400">Add a new property using the form on the right</Text>
+                    </CardBody>
+                  </Card>
+                </Box>
               )}
 
-              {/* Navigation Controls */}
-              <Flex 
-                justify="space-between" 
-                align="center" 
-                mt={4}
-                flexDirection={["column", "row"]}
-                gap={[4, 0]}
-              >
-                <Button
-                  leftIcon={<ChevronLeft size={20} />}
-                  onClick={handlePreviousProperty}
-                  isDisabled={currentPropertyIndex === 0}
-                  size="lg"
-                  variant="ghost"
-                  width={["full", "auto"]}
+              {/* Navigation Controls - Only show if there are properties */}
+              {properties.length > 0 && (
+                <Flex 
+                  justify="space-between" 
+                  align="center" 
+                  mt={4}
+                  flexDirection={["column", "row"]}
+                  gap={[4, 0]}
                 >
-                  Previous Property
-                </Button>
-                <Text fontSize="sm" color="gray.600" order={["-1", "0"]}>
-                  Property {currentPropertyIndex + 1} of {properties.length}
-                </Text>
-                <Button
-                  rightIcon={<ChevronRight size={20} />}
-                  onClick={handleNextProperty}
-                  isDisabled={currentPropertyIndex === properties.length - 1}
-                  size="lg"
-                  variant="ghost"
-                  width={["full", "auto"]}
-                >
-                  Next Property
-                </Button>
-              </Flex>
+                  <Button
+                    leftIcon={<ChevronLeft size={20} />}
+                    onClick={handlePreviousProperty}
+                    isDisabled={currentPropertyIndex === 0}
+                    size="lg"
+                    variant="ghost"
+                    width={["full", "auto"]}
+                  >
+                    Previous Property
+                  </Button>
+                  <Text fontSize="sm" color="gray.600" order={["-1", "0"]}>
+                    Property {currentPropertyIndex + 1} of {properties.length}
+                  </Text>
+                  <Button
+                    rightIcon={<ChevronRight size={20} />}
+                    onClick={handleNextProperty}
+                    isDisabled={currentPropertyIndex === properties.length - 1}
+                    size="lg"
+                    variant="ghost"
+                    width={["full", "auto"]}
+                  >
+                    Next Property
+                  </Button>
+                </Flex>
+              )}
             </CardBody>
           </Card>
         </GridItem>
