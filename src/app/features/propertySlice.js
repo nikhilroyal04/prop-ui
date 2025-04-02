@@ -60,7 +60,6 @@ export const fetchPropertyById = (id) => async (dispatch) => {
 
 export const updateProperty = (id, updatedProperty) => async (dispatch) => {
   try {
-    dispatch(setLoading(true));
     const response = await axios.put(`https://prop-backend.vercel.app/v1/property/updateProperty/${id}`, updatedProperty, {
       headers: {
         'Content-Type': 'multipart/form-data',
