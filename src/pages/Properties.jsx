@@ -488,7 +488,7 @@ export default function Properties() {
 
                   <GridItem>
                     <FormControl>
-                      <FormLabel>Transaction Type</FormLabel>
+                      <FormLabel>Listing Type</FormLabel>
                       <Select
                         name="transactionType"
                         value={advancedFilters.transactionType}
@@ -679,7 +679,7 @@ export default function Properties() {
                             <Text textTransform="capitalize">{filteredProperties[currentPropertyIndex].propertySubtype || 'N/A'}</Text>
                           </Box>
                           <Box>
-                            <Text fontWeight="bold">Transaction Type</Text>
+                            <Text fontWeight="bold">Listing Type</Text>
                             <Text textTransform="capitalize">{filteredProperties[currentPropertyIndex].transactionType?.replace(/([A-Z])/g, ' $1') || 'N/A'}</Text>
                           </Box>
                           <Box>
