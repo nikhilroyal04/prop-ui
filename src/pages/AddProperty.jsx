@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Button,
@@ -19,8 +21,13 @@ import {
   GridItem,
   useToast,
   FormErrorMessage,
+  Card,
+  CardBody,
+  Divider,
+  HStack,
 } from '@chakra-ui/react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, ArrowLeft } from 'lucide-react';
+import { createProperty, updateProperty, selectSelectedProperty, fetchPropertyById } from '../app/features/propertySlice';
 
 const initialFormState = {
   // Basic Property Details
@@ -29,6 +36,7 @@ const initialFormState = {
   propertyType: '',
   propertySubtype: '',
   propertyStatus: '',
+  currentStatus: '',
   transactionType: '', // Buy or Rent
   carpetArea: '',
   carpetAreaUnit: 'sqft',
@@ -69,48 +77,81 @@ const initialFormState = {
   connectivity: '',
 };
 
-export default function AddProperty({ onSubmit, isEditing, initialData, onCancel, isSubmitting }) {
-  const [formData, setFormData] = useState(() => {
-    if (initialData) {
-      return {
-        ...initialFormState,
-        ...initialData,
-        images: initialData.images || [],
-        videos: initialData.videos || [],
-        carpetAreaUnit: initialData.carpetAreaUnit || 'sqft',
-        loanAvailable: initialData.loanAvailable || 'no',
-        reraApproved: initialData.reraApproved || 'no',
-      };
-    }
-    return initialFormState;
-  });
-
-  const [imagePreviewUrls, setImagePreviewUrls] = useState(() => {
-    if (initialData?.images && Array.isArray(initialData.images)) {
-      return initialData.images.map(img =>
-        typeof img === 'string' ? img : URL.createObjectURL(img)
-      );
-    }
-    return [];
-  });
-
-  const [videoPreviewUrls, setVideoPreviewUrls] = useState(() => {
-    if (initialData?.videos && Array.isArray(initialData.videos)) {
-      return initialData.videos.map(video =>
-        typeof video === 'string' ? video : URL.createObjectURL(video)
-      );
-    }
-    return [];
-  });
-
+export default function AddProperty() {
+  const { id } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const toast = useToast();
+  const property = useSelector(selectSelectedProperty);
+  const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [images, setImages] = useState([]);
+  const [videos, setVideos] = useState([]);
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
-  const toast = useToast({
-    position: 'top-right',
-    duration: 3000,
-    isClosable: true,
-  });
+
+  const isEditing = location.pathname.includes('/edit/');
+
+  useEffect(() => {
+    if (isEditing && id) {
+      dispatch(fetchPropertyById(id));
+    }
+  }, [dispatch, id, isEditing]);
+
+  useEffect(() => {
+    if (isEditing && id && property) {
+      setFormData({
+        ...property,
+        // Ensure all required fields are present
+        title: property.title || '',
+        description: property.description || '',
+        propertyType: property.propertyType || '',
+        propertySubtype: property.propertySubtype || '',
+        propertyStatus: property.propertyStatus || '',
+        currentStatus: property.currentStatus || '',
+        transactionType: property.transactionType || '',
+        carpetArea: property.carpetArea || '',
+        carpetAreaUnit: property.carpetAreaUnit || 'sqft',
+        ageOfConstruction: property.ageOfConstruction || '',
+        location: property.location || '',
+        landmark: property.landmark || '',
+        googleMapsUrl: property.googleMapsUrl || '',
+        rate: property.rate || '',
+        loanAvailable: property.loanAvailable || 'no',
+        bankName: property.bankName || '',
+        reraApproved: property.reraApproved || 'no',
+        reraNumber: property.reraNumber || '',
+        bedrooms: property.bedrooms || '',
+        bathrooms: property.bathrooms || '',
+        balconies: property.balconies || '',
+        parking: property.parking || '',
+        furnishing: property.furnishing || '',
+        facing: property.facing || '',
+        floor: property.floor || '',
+        totalFloors: property.totalFloors || '',
+        amenities: property.amenities || [],
+      });
+      
+      // Set images and videos if they exist
+      if (property.images && property.images.length > 0) {
+        setImages(property.images);
+      }
+      
+      if (property.videos && property.videos.length > 0) {
+        setVideos(property.videos);
+      }
+    } else if (isEditing && !property) {
+      toast({
+        title: 'Property not found',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      navigate('/properties');
+    }
+  }, [isEditing, id, property, navigate, toast]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -123,7 +164,7 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
     const newImages = [...formData.images];
-    const newPreviewUrls = [...imagePreviewUrls];
+    const newPreviewUrls = [...images];
 
     if (newImages.length + files.length > 10) {
       toast({
@@ -141,7 +182,7 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
         const reader = new FileReader();
         reader.onloadend = () => {
           newPreviewUrls.push(reader.result);
-          setImagePreviewUrls([...newPreviewUrls]);
+          setImages([...newPreviewUrls]);
         };
         reader.readAsDataURL(file);
       }
@@ -156,7 +197,7 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
   const handleVideoSelect = (e) => {
     const files = Array.from(e.target.files);
     const newVideos = [...formData.videos];
-    const newPreviewUrls = [...videoPreviewUrls];
+    const newPreviewUrls = [...videos];
 
     if (newVideos.length + files.length > 5) {
       toast({
@@ -180,7 +221,7 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
       ...prev,
       videos: newVideos
     }));
-    setVideoPreviewUrls(newPreviewUrls);
+    setVideos(newPreviewUrls);
   };
 
   const handleVideoUrlAdd = () => {
@@ -198,99 +239,138 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
     }
 
     const newVideos = [...formData.videos, videoUrl];
-    const newPreviewUrls = [...videoPreviewUrls, videoUrl];
+    const newPreviewUrls = [...videos, videoUrl];
 
     setFormData(prev => ({
       ...prev,
       videos: newVideos,
       tempVideoUrl: ''
     }));
-    setVideoPreviewUrls(newPreviewUrls);
+    setVideos(newPreviewUrls);
   };
 
   const handleRemoveImage = (index) => {
     const newImages = formData.images.filter((_, i) => i !== index);
-    const newPreviewUrls = imagePreviewUrls.filter((_, i) => i !== index);
+    const newPreviewUrls = images.filter((_, i) => i !== index);
 
     setFormData(prev => ({
       ...prev,
       images: newImages
     }));
-    setImagePreviewUrls(newPreviewUrls);
+    setImages(newPreviewUrls);
   };
 
   const handleRemoveVideo = (index) => {
     const newVideos = formData.videos.filter((_, i) => i !== index);
-    const newPreviewUrls = videoPreviewUrls.filter((_, i) => i !== index);
+    const newPreviewUrls = videos.filter((_, i) => i !== index);
 
     setFormData(prev => ({
       ...prev,
       videos: newVideos
     }));
-    setVideoPreviewUrls(newPreviewUrls);
+    setVideos(newPreviewUrls);
   };
 
   const validateForm = () => {
     const newErrors = {};
+    
+    // Required fields validation
+    if (!formData.title) newErrors.title = 'Title is required';
+    if (!formData.location) newErrors.location = 'Location is required';
+    if (!formData.rate) newErrors.rate = 'Rate is required';
+    if (!formData.ownerName) newErrors.ownerName = 'Owner name is required';
+    if (!formData.ownerContactNo) newErrors.ownerContactNo = 'Owner contact number is required';
+    
+    // Email validation if provided
+    if (formData.ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
+      newErrors.ownerEmail = 'Invalid email format';
+    }
+    
+    // Phone number validation
+    if (formData.ownerContactNo && !/^[0-9]{10}$/.test(formData.ownerContactNo)) {
+      newErrors.ownerContactNo = 'Phone number must be 10 digits';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const clearForm = () => {
-    setFormData(initialFormState);
-    setImagePreviewUrls([]);
-    setVideoPreviewUrls([]);
-    setErrors({});
-  };
+  const renderFormControl = (name, label, children, isRequired = false) => (
+    <FormControl isInvalid={errors[name]} isRequired={isRequired}>
+      <FormLabel>{label}</FormLabel>
+      {children}
+      {errors[name] && <FormErrorMessage>{errors[name]}</FormErrorMessage>}
+    </FormControl>
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate form
     if (!validateForm()) {
       toast({
-        title: "Validation Error",
-        description: "Please check all required fields",
-        status: "error",
+        title: 'Validation Error',
+        description: 'Please fix the errors in the form',
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
       return;
     }
-
-    const submitData = new FormData();
-
-    Object.keys(formData).forEach(key => {
-      if (key !== 'images' && key !== 'videos' && key !== 'tempVideoUrl') {
-        submitData.append(key, formData[key]);
-      }
-    });
-
-    formData.images.forEach((image) => {
-      submitData.append('images', image);
-    });
-
-    formData.videos.forEach((video, index) => {
-      if (video instanceof File) {
-        submitData.append('videos', video);
-      } else {
-        submitData.append(`videos[${index}]`, video);
-      }
-    });
-
+    
     try {
-      await onSubmit(submitData);
+      setIsSubmitting(true);
       
-      if (!isEditing) {
-        clearForm();
+      // Prepare data for submission
+      const propertyData = new FormData();
+      
+      // Append all form fields
+      Object.keys(formData).forEach(key => {
+        if (key !== 'images' && key !== 'videos') {
+          propertyData.append(key, formData[key]);
+        }
+      });
+      
+      // Append images
+      formData.images.forEach((image, index) => {
+        propertyData.append(`images`, image);
+      });
+      
+      // Append videos
+      formData.videos.forEach((video, index) => {
+        propertyData.append(`videos`, video);
+      });
+      
+      if (isEditing) {
+        await dispatch(updateProperty(id, propertyData)).unwrap();
+        toast({
+          title: 'Property updated successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        await dispatch(createProperty(propertyData)).unwrap();
+        toast({
+          title: 'Property added successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
       }
+      
+      // Navigate back to properties list
+      navigate('/properties');
     } catch (error) {
       toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
-        status: "error",
+        title: 'Error',
+        description: error.message || 'Something went wrong',
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -307,7 +387,7 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
       />
       <Box borderWidth={1} borderRadius="md" p={4}>
         <SimpleGrid columns={[2, 3, 4]} spacing={4} mb={4}>
-          {imagePreviewUrls.map((url, index) => (
+          {images.map((url, index) => (
             <Box key={index} position="relative">
               <AspectRatio ratio={4 / 3}>
                 <Image
@@ -342,7 +422,7 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
               </Text>
             </Box>
           ))}
-          {imagePreviewUrls.length < 10 && (
+          {images.length < 10 && (
             <AspectRatio ratio={4 / 3}>
               <Button
                 onClick={() => fileInputRef.current?.click()}
@@ -357,7 +437,7 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
           )}
         </SimpleGrid>
         <Text fontSize="sm" color="gray.500">
-          {imagePreviewUrls.length}/10 images uploaded. Click to add more images.
+          {images.length}/10 images uploaded. Click to add more images.
         </Text>
       </Box>
     </FormControl>
@@ -386,10 +466,10 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
         </Flex>
 
         <SimpleGrid columns={[1, 2]} spacing={4} mb={4}>
-          {videoPreviewUrls.map((url, index) => (
+          {videos.map((url, index) => (
             <Box key={index} position="relative">
               <AspectRatio ratio={16 / 9}>
-                {typeof formData.videos[index] === 'string' ? (
+                {typeof videos[index] === 'string' ? (
                   <iframe
                     src={url.replace('watch?v=', 'embed/')}
                     title={`Video ${index + 1}`}
@@ -429,7 +509,7 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
               </Text>
             </Box>
           ))}
-          {videoPreviewUrls.length < 5 && (
+          {videos.length < 5 && (
             <AspectRatio ratio={16 / 9}>
               <Button
                 onClick={() => videoInputRef.current?.click()}
@@ -447,553 +527,621 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
     </FormControl>
   );
 
-  // Reset form when initialData changes
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        ...initialFormState,
-        ...initialData,
-        images: initialData.images || [],
-        videos: initialData.videos || [],
-        carpetAreaUnit: initialData.carpetAreaUnit || 'sqft',
-        loanAvailable: initialData.loanAvailable || 'no',
-        reraApproved: initialData.reraApproved || 'no',
-      });
-
-      // Update image previews
-      if (initialData.images && Array.isArray(initialData.images)) {
-        const newPreviewUrls = initialData.images.map(img =>
-          typeof img === 'string' ? img : URL.createObjectURL(img)
-        );
-        setImagePreviewUrls(newPreviewUrls);
-      } else {
-        setImagePreviewUrls([]);
-      }
-
-      // Update video previews
-      if (initialData.videos && Array.isArray(initialData.videos)) {
-        const newVideoPreviewUrls = initialData.videos.map(video =>
-          typeof video === 'string' ? video : URL.createObjectURL(video)
-        );
-        setVideoPreviewUrls(newVideoPreviewUrls);
-      } else {
-        setVideoPreviewUrls([]);
-      }
-    } else {
-      setFormData(initialFormState);
-      setImagePreviewUrls([]);
-      setVideoPreviewUrls([]);
-    }
-  }, [initialData]);
-
-  // Update FormControl components to show errors
-  const renderFormControl = (name, label, children, isRequired = false) => (
-    <FormControl isRequired={isRequired} isInvalid={!!errors[name]}>
-      <FormLabel>{label}</FormLabel>
-      {children}
-      {errors[name] && (
-        <FormErrorMessage>{errors[name]}</FormErrorMessage>
-      )}
-    </FormControl>
-  );
-
   return (
-    <Box flex="1" overflowY="auto" pr={2}>
-      <form onSubmit={handleSubmit}>
-        <VStack spacing={6} align="stretch">
-          {/* 1. Basic Property Details */}
-          <Box>
-            <Heading size="sm" mb={4}>Basic Property Details</Heading>
-            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-              <GridItem gridColumn={{ base: "1", md: "1 / -1" }}>
-                {renderFormControl('title', 'Property Title', (
-                  <Input
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    placeholder="Enter property title"
-                  />
-                ), true)}
-              </GridItem>
+    <Box p={4}>
+      <Button
+        leftIcon={<ArrowLeft />}
+        variant="ghost"
+        mb={4}
+        onClick={() => navigate('/properties')}
+      >
+        Back to Properties
+      </Button>
+      
+      <Card>
+        <CardBody>
+          <Heading size="lg" mb={6}>
+            {isEditing ? 'Edit Property' : 'Add New Property'}
+          </Heading>
+          
+          <form onSubmit={handleSubmit}>
+            <VStack spacing={8} align="stretch">
+              {/* 1. Basic Property Details */}
+              <Box>
+                <Heading size="md" mb={4} color="blue.600">Basic Property Details</Heading>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
+                  <GridItem colSpan={{ base: 1, md: 2, lg: 3 }}>
+                    {renderFormControl('title', 'Property Title', (
+                      <Input
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        placeholder="Enter property title"
+                        size="lg"
+                        bg="white"
+                        _hover={{ borderColor: 'blue.400' }}
+                      />
+                    ), true)}
+                  </GridItem>
 
-              <GridItem gridColumn={{ base: "1", md: "1 / -1" }}>
-                <FormControl>
-                  <FormLabel>Description</FormLabel>
-                  <Textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    placeholder="Enter property description"
-                    rows={4}
-                  />
-                </FormControl>
-              </GridItem>
+                  <GridItem colSpan={{ base: 1, md: 2, lg: 3 }}>
+                    <FormControl>
+                      <FormLabel>Description</FormLabel>
+                      <Textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        placeholder="Enter property description"
+                        rows={4}
+                        bg="white"
+                        _hover={{ borderColor: 'blue.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl isRequired>
-                  <FormLabel>Listing Type</FormLabel>
-                  <Select
-                    name="transactionType"
-                    value={formData.transactionType}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Listing Type</option>
-                    <option value="sale">For Sale</option>
-                    <option value="rent">For Rent</option>
-                    <option value="lease">For Lease</option>
-                  </Select>
-                </FormControl>
-              </GridItem>
+                  <GridItem>
+                    <FormControl isRequired>
+                      <FormLabel>Listing Type</FormLabel>
+                      <Select
+                        name="transactionType"
+                        value={formData.transactionType}
+                        onChange={handleInputChange}
+                        bg="white"
+                        _hover={{ borderColor: 'blue.400' }}
+                      >
+                        <option value="">Select Listing Type</option>
+                        <option value="sale">For Sale</option>
+                        <option value="rent">For Rent</option>
+                        <option value="lease">For Lease</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Property Status</FormLabel>
-                  <Select
-                    name="propertyStatus"
-                    value={formData.propertyStatus}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Status</option>
-                    <option value="ready">Ready to Move</option>
-                    <option value="underConstruction">Under Construction</option>
-                    <option value="newLaunch">New Launch</option>
-                    <option value="resale">Resale</option>
-                  </Select>
-                </FormControl>
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Property Status</FormLabel>
+                      <Select
+                        name="propertyStatus"
+                        value={formData.propertyStatus}
+                        onChange={handleInputChange}
+                        bg="white"
+                        _hover={{ borderColor: 'blue.400' }}
+                      >
+                        <option value="">Select Status</option>
+                        <option value="ready">Ready to Move</option>
+                        <option value="underConstruction">Under Construction</option>
+                        <option value="newLaunch">New Launch</option>
+                        <option value="resale">Resale</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Property Type</FormLabel>
-                  <Select
-                    name="propertyType"
-                    value={formData.propertyType}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Property Type</option>
-                    <option value="residential">Residential</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="industrial">Industrial</option>
-                    <option value="agricultural">Agricultural</option>
-                  </Select>
-                </FormControl>
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Current Status</FormLabel>
+                      <Select
+                        name="currentStatus"
+                        value={formData.currentStatus}
+                        onChange={handleInputChange}
+                        bg="white"
+                        _hover={{ borderColor: 'blue.400' }}
+                      >
+                        <option value="">Select Current Status</option>
+                        <option value="available">Available</option>
+                        <option value="sold">Sold</option>
+                        <option value="rented">Rented</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="pending">Pending</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Property Subtype</FormLabel>
-                  <Select
-                    name="propertySubtype"
-                    value={formData.propertySubtype}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Subtype</option>
-                    {formData.propertyType === 'residential' && (
-                      <>
-                        <option value="apartment">Apartment</option>
-                        <option value="villa">Villa</option>
-                        <option value="duplex">Duplex</option>
-                        <option value="triplex">Triplex</option>
-                        <option value="penthouse">Penthouse</option>
-                        <option value="studio">Studio Apartment</option>
-                        <option value="plot">Plot</option>
-                        <option value="house">Independent House</option>
-                        <option value="pg">PG/Hostel</option>
-                      </>
-                    )}
-                    {formData.propertyType === 'commercial' && (
-                      <>
-                        <option value="office">Office Space</option>
-                        <option value="retail">Retail Shop</option>
-                        <option value="warehouse">Warehouse</option>
-                        <option value="showroom">Showroom</option>
-                        <option value="commercialPlot">Commercial Plot</option>
-                        <option value="hotel">Hotel</option>
-                        <option value="restaurant">Restaurant</option>
-                        <option value="school">School</option>
-                        <option value="college">College</option>
-                        <option value="hospital">Hospital</option>
-                      </>
-                    )}
-                    {formData.propertyType === 'industrial' && (
-                      <>
-                        <option value="factory">Factory</option>
-                        <option value="industrialPlot">Industrial Plot</option>
-                        <option value="industrialShed">Industrial Shed</option>
-                        <option value="warehouse">Warehouse</option>
-                      </>
-                    )}
-                    {formData.propertyType === 'agricultural' && (
-                      <>
-                        <option value="farm">Farm</option>
-                        <option value="orchard">Orchard</option>
-                        <option value="plantation">Plantation</option>
-                        <option value="agriculturalPlot">Agricultural Plot</option>
-                      </>
-                    )}
-                  </Select>
-                </FormControl>
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Property Type</FormLabel>
+                      <Select
+                        name="propertyType"
+                        value={formData.propertyType}
+                        onChange={handleInputChange}
+                        bg="white"
+                        _hover={{ borderColor: 'blue.400' }}
+                      >
+                        <option value="">Select Property Type</option>
+                        <option value="residential">Residential</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="industrial">Industrial</option>
+                        <option value="agricultural">Agricultural</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Carpet Area</FormLabel>
-                  <Flex gap={2}>
-                    <Input
-                      name="carpetArea"
-                      value={formData.carpetArea}
-                      onChange={handleInputChange}
-                      type="number"
-                      placeholder="Enter area"
-                      flex="1"
-                    />
-                    <Select
-                      name="carpetAreaUnit"
-                      value={formData.carpetAreaUnit}
-                      onChange={handleInputChange}
-                      width="120px"
-                    >
-                      <option value="sqft">Sq. Ft.</option>
-                      <option value="sqyd">Sq. Yd.</option>
-                      <option value="sqm">Sq. M.</option>
-                      <option value="acre">Acre</option>
-                    </Select>
-                  </Flex>
-                </FormControl>
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Property Subtype</FormLabel>
+                      <Select
+                        name="propertySubtype"
+                        value={formData.propertySubtype}
+                        onChange={handleInputChange}
+                        bg="white"
+                        _hover={{ borderColor: 'blue.400' }}
+                      >
+                        <option value="">Select Subtype</option>
+                        {formData.propertyType === 'residential' && (
+                          <>
+                            <option value="apartment">Apartment</option>
+                            <option value="villa">Villa</option>
+                            <option value="duplex">Duplex</option>
+                            <option value="triplex">Triplex</option>
+                            <option value="penthouse">Penthouse</option>
+                            <option value="studio">Studio Apartment</option>
+                            <option value="plot">Plot</option>
+                            <option value="house">Independent House</option>
+                            <option value="pg">PG/Hostel</option>
+                          </>
+                        )}
+                        {formData.propertyType === 'commercial' && (
+                          <>
+                            <option value="office">Office Space</option>
+                            <option value="retail">Retail Shop</option>
+                            <option value="warehouse">Warehouse</option>
+                            <option value="showroom">Showroom</option>
+                            <option value="commercialPlot">Commercial Plot</option>
+                            <option value="hotel">Hotel</option>
+                            <option value="restaurant">Restaurant</option>
+                            <option value="school">School</option>
+                            <option value="college">College</option>
+                            <option value="hospital">Hospital</option>
+                          </>
+                        )}
+                        {formData.propertyType === 'industrial' && (
+                          <>
+                            <option value="factory">Factory</option>
+                            <option value="industrialPlot">Industrial Plot</option>
+                            <option value="industrialShed">Industrial Shed</option>
+                            <option value="warehouse">Warehouse</option>
+                          </>
+                        )}
+                        {formData.propertyType === 'agricultural' && (
+                          <>
+                            <option value="farm">Farm</option>
+                            <option value="orchard">Orchard</option>
+                            <option value="plantation">Plantation</option>
+                            <option value="agriculturalPlot">Agricultural Plot</option>
+                          </>
+                        )}
+                      </Select>
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Age of Construction</FormLabel>
-                  <Input
-                    name="ageOfConstruction"
-                    value={formData.ageOfConstruction}
-                    onChange={handleInputChange}
-                    placeholder="e.g., 2 years"
-                  />
-                </FormControl>
-              </GridItem>
-            </Grid>
-          </Box>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Carpet Area</FormLabel>
+                      <Flex gap={2}>
+                        <Input
+                          name="carpetArea"
+                          value={formData.carpetArea}
+                          onChange={handleInputChange}
+                          type="number"
+                          placeholder="Enter area"
+                          flex="1"
+                          bg="white"
+                          _hover={{ borderColor: 'blue.400' }}
+                        />
+                        <Select
+                          name="carpetAreaUnit"
+                          value={formData.carpetAreaUnit}
+                          onChange={handleInputChange}
+                          width="120px"
+                          bg="white"
+                          _hover={{ borderColor: 'blue.400' }}
+                        >
+                          <option value="sqft">Sq. Ft.</option>
+                          <option value="sqyd">Sq. Yd.</option>
+                          <option value="sqm">Sq. M.</option>
+                          <option value="acre">Acre</option>
+                        </Select>
+                      </Flex>
+                    </FormControl>
+                  </GridItem>
 
-          {/* 2. Location Details */}
-          <Box>
-            <Heading size="sm" mb={4}>Location Details</Heading>
-            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-              <GridItem>
-                {renderFormControl('location', 'Location', (
-                  <Input
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                  />
-                ), true)}
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Age of Construction</FormLabel>
+                      <Input
+                        name="ageOfConstruction"
+                        value={formData.ageOfConstruction}
+                        onChange={handleInputChange}
+                        placeholder="e.g., 2 years"
+                        bg="white"
+                        _hover={{ borderColor: 'blue.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
+                </Grid>
+              </Box>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Landmark</FormLabel>
-                  <Input
-                    name="landmark"
-                    value={formData.landmark}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
-              </GridItem>
+              {/* 2. Location Details */}
+              <Box>
+                <Heading size="md" mb={4} color="green.600">Location Details</Heading>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
+                  <GridItem colSpan={{ base: 1, md: 2 }}>
+                    {renderFormControl('location', 'Location', (
+                      <Input
+                        name="location"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        placeholder="Enter property location"
+                        bg="white"
+                        _hover={{ borderColor: 'green.400' }}
+                      />
+                    ), true)}
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Google Maps URL</FormLabel>
-                  <Input
-                    name="googleMapsUrl"
-                    value={formData.googleMapsUrl}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
-              </GridItem>
-            </Grid>
-          </Box>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Landmark</FormLabel>
+                      <Input
+                        name="landmark"
+                        value={formData.landmark}
+                        onChange={handleInputChange}
+                        placeholder="Enter nearby landmark"
+                        bg="white"
+                        _hover={{ borderColor: 'green.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
 
-          {/* 3. Pricing & Ownership */}
-          <Box>
-            <Heading size="sm" mb={4}>Pricing & Ownership</Heading>
-            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-              <GridItem>
-                {renderFormControl('rate', 'Rate', (
-                  <Input
-                    name="rate"
-                    value={formData.rate}
-                    onChange={handleInputChange}
-                    type="text"
-                  />
-                ), true)}
-              </GridItem>
+                  <GridItem colSpan={{ base: 1, md: 2, lg: 3 }}>
+                    <FormControl>
+                      <FormLabel>Google Maps URL</FormLabel>
+                      <Input
+                        name="googleMapsUrl"
+                        value={formData.googleMapsUrl}
+                        onChange={handleInputChange}
+                        placeholder="Enter Google Maps URL"
+                        bg="white"
+                        _hover={{ borderColor: 'green.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
+                </Grid>
+              </Box>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Loan Available</FormLabel>
-                  <Select
-                    name="loanAvailable"
-                    value={formData.loanAvailable}
-                    onChange={handleInputChange}
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </Select>
-                </FormControl>
-              </GridItem>
+              {/* 3. Pricing & Ownership */}
+              <Box>
+                <Heading size="md" mb={4} color="purple.600">Pricing & Ownership</Heading>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
+                  <GridItem>
+                    {renderFormControl('rate', 'Rate', (
+                      <Input
+                        name="rate"
+                        value={formData.rate}
+                        onChange={handleInputChange}
+                        type="text"
+                        placeholder="Enter rate"
+                        bg="white"
+                        _hover={{ borderColor: 'purple.400' }}
+                      />
+                    ), true)}
+                  </GridItem>
 
-              {formData.loanAvailable === 'yes' && (
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Bank Name</FormLabel>
-                    <Input
-                      name="bankName"
-                      value={formData.bankName}
-                      onChange={handleInputChange}
-                    />
-                  </FormControl>
-                </GridItem>
-              )}
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Loan Available</FormLabel>
+                      <Select
+                        name="loanAvailable"
+                        value={formData.loanAvailable}
+                        onChange={handleInputChange}
+                        bg="white"
+                        _hover={{ borderColor: 'purple.400' }}
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>RERA Approved</FormLabel>
-                  <Select
-                    name="reraApproved"
-                    value={formData.reraApproved}
-                    onChange={handleInputChange}
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </Select>
-                </FormControl>
-              </GridItem>
+                  {formData.loanAvailable === 'yes' && (
+                    <GridItem>
+                      <FormControl>
+                        <FormLabel>Bank Name</FormLabel>
+                        <Input
+                          name="bankName"
+                          value={formData.bankName}
+                          onChange={handleInputChange}
+                          placeholder="Enter bank name"
+                          bg="white"
+                          _hover={{ borderColor: 'purple.400' }}
+                        />
+                      </FormControl>
+                    </GridItem>
+                  )}
 
-              {formData.reraApproved === 'yes' && (
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>RERA Number</FormLabel>
-                    <Input
-                      name="reraNumber"
-                      value={formData.reraNumber}
-                      onChange={handleInputChange}
-                    />
-                  </FormControl>
-                </GridItem>
-              )}
-            </Grid>
-          </Box>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>RERA Approved</FormLabel>
+                      <Select
+                        name="reraApproved"
+                        value={formData.reraApproved}
+                        onChange={handleInputChange}
+                        bg="white"
+                        _hover={{ borderColor: 'purple.400' }}
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
 
-          {/* 4. Property Specifications */}
-          <Box>
-            <Heading size="sm" mb={4}>Property Specifications</Heading>
-            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Bedrooms</FormLabel>
-                  <Input
-                    name="bedrooms"
-                    value={formData.bedrooms}
-                    onChange={handleInputChange}
-                    type="number"
-                  />
-                </FormControl>
-              </GridItem>
+                  {formData.reraApproved === 'yes' && (
+                    <GridItem>
+                      <FormControl>
+                        <FormLabel>RERA Number</FormLabel>
+                        <Input
+                          name="reraNumber"
+                          value={formData.reraNumber}
+                          onChange={handleInputChange}
+                          placeholder="Enter RERA number"
+                          bg="white"
+                          _hover={{ borderColor: 'purple.400' }}
+                        />
+                      </FormControl>
+                    </GridItem>
+                  )}
+                </Grid>
+              </Box>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Bathrooms</FormLabel>
-                  <Input
-                    name="bathrooms"
-                    value={formData.bathrooms}
-                    onChange={handleInputChange}
-                    type="number"
-                  />
-                </FormControl>
-              </GridItem>
+              {/* 4. Property Specifications */}
+              <Box>
+                <Heading size="md" mb={4} color="orange.600">Property Specifications</Heading>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={6}>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Bedrooms</FormLabel>
+                      <Input
+                        name="bedrooms"
+                        value={formData.bedrooms}
+                        onChange={handleInputChange}
+                        type="number"
+                        placeholder="No. of bedrooms"
+                        bg="white"
+                        _hover={{ borderColor: 'orange.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Additional Rooms</FormLabel>
-                  <Input
-                    name="additionalRooms"
-                    value={formData.additionalRooms}
-                    onChange={handleInputChange}
-                    placeholder="e.g., Study, Pooja Room"
-                  />
-                </FormControl>
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Bathrooms</FormLabel>
+                      <Input
+                        name="bathrooms"
+                        value={formData.bathrooms}
+                        onChange={handleInputChange}
+                        type="number"
+                        placeholder="No. of bathrooms"
+                        bg="white"
+                        _hover={{ borderColor: 'orange.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Floors</FormLabel>
-                  <Flex gap={2} align="center">
-                    <Input
-                      name="currentFloor"
-                      value={formData.currentFloor || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, currentFloor: e.target.value }))}
-                      type="number"
-                      placeholder="Current"
-                      width="100px"
-                    />
-                    <Text>out of</Text>
-                    <Input
-                      name="totalFloors"
-                      value={formData.totalFloors || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, totalFloors: e.target.value }))}
-                      type="number"
-                      placeholder="Total"
-                      width="100px"
-                    />
-                  </Flex>
-                </FormControl>
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Additional Rooms</FormLabel>
+                      <Input
+                        name="additionalRooms"
+                        value={formData.additionalRooms}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Study, Pooja Room"
+                        bg="white"
+                        _hover={{ borderColor: 'orange.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Facing</FormLabel>
-                  <Select
-                    name="facing"
-                    value={formData.facing}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Facing</option>
-                    <option value="north">North</option>
-                    <option value="north-east">North-East</option>
-                    <option value="east">East</option>
-                    <option value="south-east">South-East</option>
-                    <option value="south">South</option>
-                    <option value="south-west">South-West</option>
-                    <option value="west">West</option>
-                    <option value="north-west">North-West</option>
-                  </Select>
-                </FormControl>
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Floors</FormLabel>
+                      <Flex gap={2} align="center">
+                        <Input
+                          name="currentFloor"
+                          value={formData.currentFloor || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, currentFloor: e.target.value }))}
+                          type="number"
+                          placeholder="Current"
+                          width="100px"
+                          bg="white"
+                          _hover={{ borderColor: 'orange.400' }}
+                        />
+                        <Text>out of</Text>
+                        <Input
+                          name="totalFloors"
+                          value={formData.totalFloors || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, totalFloors: e.target.value }))}
+                          type="number"
+                          placeholder="Total"
+                          width="100px"
+                          bg="white"
+                          _hover={{ borderColor: 'orange.400' }}
+                        />
+                      </Flex>
+                    </FormControl>
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Amenities</FormLabel>
-                  <Textarea
-                    name="amenities"
-                    value={formData.amenities}
-                    onChange={handleInputChange}
-                    placeholder="Enter amenities (e.g., Swimming Pool, Gym, Park, Security)"
-                    rows={4}
-                  />
-                </FormControl>
-              </GridItem>
-            </Grid>
-          </Box>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Facing</FormLabel>
+                      <Select
+                        name="facing"
+                        value={formData.facing}
+                        onChange={handleInputChange}
+                        bg="white"
+                        _hover={{ borderColor: 'orange.400' }}
+                      >
+                        <option value="">Select Facing</option>
+                        <option value="north">North</option>
+                        <option value="north-east">North-East</option>
+                        <option value="east">East</option>
+                        <option value="south-east">South-East</option>
+                        <option value="south">South</option>
+                        <option value="south-west">South-West</option>
+                        <option value="west">West</option>
+                        <option value="north-west">North-West</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
 
-          {/* 5. Developer & Project Information */}
-          <Box>
-            <Heading size="sm" mb={4}>Developer & Project Information</Heading>
-            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Developer</FormLabel>
-                  <Input
-                    name="developer"
-                    value={formData.developer}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
-              </GridItem>
+                  <GridItem colSpan={{ base: 1, md: 2, lg: 3 }}>
+                    <FormControl>
+                      <FormLabel>Amenities</FormLabel>
+                      <Textarea
+                        name="amenities"
+                        value={formData.amenities}
+                        onChange={handleInputChange}
+                        placeholder="Enter amenities (e.g., Swimming Pool, Gym, Park, Security)"
+                        rows={4}
+                        bg="white"
+                        _hover={{ borderColor: 'orange.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
+                </Grid>
+              </Box>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Project Name</FormLabel>
-                  <Input
-                    name="projectName"
-                    value={formData.projectName}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
-              </GridItem>
-            </Grid>
-          </Box>
+              {/* 5. Developer & Project Information */}
+              <Box>
+                <Heading size="md" mb={4} color="teal.600">Developer & Project Information</Heading>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Developer</FormLabel>
+                      <Input
+                        name="developer"
+                        value={formData.developer}
+                        onChange={handleInputChange}
+                        placeholder="Enter developer name"
+                        bg="white"
+                        _hover={{ borderColor: 'teal.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
 
-          {/* 6. Owner / Seller Details */}
-          <Box>
-            <Heading size="sm" mb={4}>Owner / Seller Details</Heading>
-            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-              <GridItem>
-                {renderFormControl('ownerName', 'Owner Name', (
-                  <Input
-                    name="ownerName"
-                    value={formData.ownerName}
-                    onChange={handleInputChange}
-                  />
-                ), true)}
-              </GridItem>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Project Name</FormLabel>
+                      <Input
+                        name="projectName"
+                        value={formData.projectName}
+                        onChange={handleInputChange}
+                        placeholder="Enter project name"
+                        bg="white"
+                        _hover={{ borderColor: 'teal.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
+                </Grid>
+              </Box>
 
-              <GridItem>
-                {renderFormControl('ownerContactNo', 'Owner Contact No.', (
-                  <Input
-                    name="ownerContactNo"
-                    value={formData.ownerContactNo}
-                    onChange={handleInputChange}
-                    type="tel"
-                  />
-                ), true)}
-              </GridItem>
+              {/* 6. Owner / Seller Details */}
+              <Box>
+                <Heading size="md" mb={4} color="red.600">Owner / Seller Details</Heading>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
+                  <GridItem>
+                    {renderFormControl('ownerName', 'Owner Name', (
+                      <Input
+                        name="ownerName"
+                        value={formData.ownerName}
+                        onChange={handleInputChange}
+                        placeholder="Enter owner name"
+                        bg="white"
+                        _hover={{ borderColor: 'red.400' }}
+                      />
+                    ), true)}
+                  </GridItem>
 
-              <GridItem>
-                <FormControl>
-                  <FormLabel>Owner Email</FormLabel>
-                  <Input
-                    name="ownerEmail"
-                    value={formData.ownerEmail}
-                    onChange={handleInputChange}
-                    type="email"
-                  />
-                </FormControl>
-              </GridItem>
-            </Grid>
-          </Box>
+                  <GridItem>
+                    {renderFormControl('ownerContactNo', 'Owner Contact No.', (
+                      <Input
+                        name="ownerContactNo"
+                        value={formData.ownerContactNo}
+                        onChange={handleInputChange}
+                        type="tel"
+                        placeholder="Enter contact number"
+                        bg="white"
+                        _hover={{ borderColor: 'red.400' }}
+                      />
+                    ), true)}
+                  </GridItem>
 
-          {/* 7. Media & Connectivity */}
-          <Box>
-            <Heading size="sm" mb={4}>Media & Connectivity</Heading>
-            {imageUploadSection}
-            {videoUploadSection}
-            <FormControl mt={4}>
-              <FormLabel>Connectivity</FormLabel>
-              <Textarea
-                name="connectivity"
-                value={formData.connectivity}
-                onChange={handleInputChange}
-                placeholder="Describe the connectivity details..."
-              />
-            </FormControl>
-          </Box>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Owner Email</FormLabel>
+                      <Input
+                        name="ownerEmail"
+                        value={formData.ownerEmail}
+                        onChange={handleInputChange}
+                        type="email"
+                        placeholder="Enter email address"
+                        bg="white"
+                        _hover={{ borderColor: 'red.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
+                </Grid>
+              </Box>
 
-          <Flex gap={4}>
-            {isEditing && (
-              <Button
-                onClick={onCancel}
-                size="lg"
-                width="full"
-                variant="ghost"
-                isDisabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-            )}
-            <Button
-              type="submit"
-              colorScheme="blue"
-              size="lg"
-              width="full"
-              isLoading={isSubmitting}
-              loadingText={isEditing ? "Updating..." : "Creating..."}
-            >
-              {isEditing ? 'Update Property' : 'Add Property'}
-            </Button>
-          </Flex>
-        </VStack>
-      </form>
+              {/* 7. Media & Connectivity */}
+              <Box>
+                <Heading size="md" mb={4} color="pink.600">Media & Connectivity</Heading>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
+                  <GridItem colSpan={{ base: 1, md: 2 }}>
+                    {imageUploadSection}
+                  </GridItem>
+                  <GridItem colSpan={{ base: 1, md: 2 }}>
+                    {videoUploadSection}
+                  </GridItem>
+                  <GridItem colSpan={{ base: 1, md: 2 }}>
+                    <FormControl>
+                      <FormLabel>Connectivity</FormLabel>
+                      <Textarea
+                        name="connectivity"
+                        value={formData.connectivity}
+                        onChange={handleInputChange}
+                        placeholder="Describe the connectivity details..."
+                        rows={4}
+                        bg="white"
+                        _hover={{ borderColor: 'pink.400' }}
+                      />
+                    </FormControl>
+                  </GridItem>
+                </Grid>
+              </Box>
+
+              <Divider my={6} />
+              
+              <HStack spacing={4} justify="flex-end">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/properties')}
+                  isDisabled={isSubmitting}
+                  size="lg"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  colorScheme="blue"
+                  isLoading={isSubmitting}
+                  loadingText={isEditing ? 'Updating...' : 'Adding...'}
+                  size="lg"
+                >
+                  {isEditing ? 'Update Property' : 'Add Property'}
+                </Button>
+              </HStack>
+            </VStack>
+          </form>
+        </CardBody>
+      </Card>
     </Box>
   );
 } 
