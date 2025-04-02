@@ -1262,7 +1262,7 @@ export default function AddProperty() {
                         name="ownerContactNo"
                         value={formData.ownerContactNo}
                         onChange={handleInputChange}
-                        type="tel"
+                        type="number"
                         placeholder="Enter contact number"
                         bg="white"
                         _hover={{ borderColor: 'red.400' }}
