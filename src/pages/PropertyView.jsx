@@ -151,6 +151,19 @@ export default function PropertyView() {
     return '';
   };
 
+  // Helper function to render array or comma-separated string
+  const renderArrayOrString = (value, renderItem) => {
+    if (!value) return null;
+    
+    if (Array.isArray(value)) {
+      return value.map(renderItem);
+    } else if (typeof value === 'string') {
+      return value.split(',').map(renderItem);
+    }
+    
+    return null;
+  };
+
   return (
     <Container maxW="container.xl" py={8}>
       <Button
@@ -354,7 +367,7 @@ export default function PropertyView() {
                       borderRadius="lg"
                     >
                       <StatLabel>Price per sq ft</StatLabel>
-                      <StatNumber fontSize="xl">{property.priceBreakup}</StatNumber>
+                      <StatNumber fontSize="xl">{property.priceBreakup || 'N/A'}</StatNumber>
                     </Stat>
                     <Stat
                       p={4}
@@ -412,51 +425,92 @@ export default function PropertyView() {
                     <VStack align="stretch" spacing={2}>
                       <HStack>
                         <Icon as={Building2} color="blue.500" />
-                        <Text>Project: {property.projectName}</Text>
+                        <Text>Project: {property.projectName || 'N/A'}</Text>
                       </HStack>
                       <HStack>
                         <Icon as={Users} color="green.500" />
-                        <Text>Developer: {property.developer}</Text>
+                        <Text>Developer: {property.developer || 'N/A'}</Text>
                       </HStack>
                       <HStack>
                         <Icon as={CheckCircle2} color="purple.500" />
-                        <Text>Ownership: {property.typeOfOwnership}</Text>
+                        <Text>Ownership: {property.typeOfOwnership || 'N/A'}</Text>
                       </HStack>
                       <HStack>
                         <Icon as={Star} color="yellow.500" />
-                        <Text>Facing: {property.facing}</Text>
+                        <Text>Facing: {property.facing || 'N/A'}</Text>
                       </HStack>
                     </VStack>
                   </Box>
 
                   <Box>
                     <Heading size="md" mb={2}>Additional Rooms</Heading>
-                    <Text>{property.additionalRooms}</Text>
+                    <Text>{property.additionalRooms || 'Not specified'}</Text>
                   </Box>
 
                   <Box>
                     <Heading size="md" mb={2}>Connectivity</Heading>
-                    <Text>{property.connectivity}</Text>
+                    <Text>{property.connectivity || 'Not specified'}</Text>
                   </Box>
 
                   <Box>
                     <Heading size="md" mb={4}>Amenities</Heading>
                     <Wrap spacing={3}>
-                      {property.amenities.split(',').map((amenity, index) => (
-                        <WrapItem key={index}>
-                          <Tag 
-                            size="md" 
-                            colorScheme="teal" 
-                            borderRadius="full"
-                            px={3}
-                            py={1.5}
-                            fontSize="sm"
-                          >
-                            <TagLabel>{amenity.trim()}</TagLabel>
-                          </Tag>
-                        </WrapItem>
-                      ))}
+                      {property.amenities && property.amenities.length > 0 ? (
+                        Array.isArray(property.amenities) ? (
+                          property.amenities.map((amenity, index) => (
+                            <WrapItem key={index}>
+                              <Tag 
+                                size="md" 
+                                colorScheme="teal" 
+                                borderRadius="full"
+                                px={3}
+                                py={1.5}
+                                fontSize="sm"
+                              >
+                                <TagLabel>{amenity.trim()}</TagLabel>
+                              </Tag>
+                            </WrapItem>
+                          ))
+                        ) : (
+                          property.amenities.split(',').map((amenity, index) => (
+                            <WrapItem key={index}>
+                              <Tag 
+                                size="md" 
+                                colorScheme="teal" 
+                                borderRadius="full"
+                                px={3}
+                                py={1.5}
+                                fontSize="sm"
+                              >
+                                <TagLabel>{amenity.trim()}</TagLabel>
+                              </Tag>
+                            </WrapItem>
+                          ))
+                        )
+                      ) : (
+                        <Text color="gray.500">No amenities listed</Text>
+                      )}
                     </Wrap>
+                  </Box>
+
+                  <Box>
+                    <Heading size="md" mb={2}>Balconies</Heading>
+                    <Text>{property.balconies || 'Not specified'}</Text>
+                  </Box>
+
+                  <Box>
+                    <Heading size="md" mb={2}>Parking</Heading>
+                    <Text>{property.parking || 'Not specified'}</Text>
+                  </Box>
+
+                  <Box>
+                    <Heading size="md" mb={2}>Furnishing</Heading>
+                    <Text>{property.furnishing || 'Not specified'}</Text>
+                  </Box>
+
+                  <Box>
+                    <Heading size="md" mb={2}>Current Status</Heading>
+                    <Text>{property.currentStatus || 'Not specified'}</Text>
                   </Box>
                 </Stack>
               </Box>

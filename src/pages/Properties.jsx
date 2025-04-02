@@ -133,12 +133,12 @@ export default function Properties() {
     onOpen();
   };
 
-  const handleEditProperty = (property) => {
-    navigate(`/properties/edit/${property.id}`);
+  const handleEdit = (id) => {
+    navigate(`/properties/edit/${id}`);
   };
 
-  const handleViewProperty = (propertyId) => {
-    navigate(`/properties/view/${propertyId}`);
+  const handleView = (id) => {
+    navigate(`/properties/view/${id}`);
   };
 
   // Compute filtered properties based on filters
@@ -162,6 +162,8 @@ export default function Properties() {
         return 'red';
       case 'rented':
         return 'blue';
+      case 'reserved':
+        return 'yellow';
       default:
         return 'gray';
     }
@@ -357,36 +359,43 @@ export default function Properties() {
 
           {filteredProperties.length > 0 ? (
             <TableContainer>
-              <Table variant="simple">
+              <Table variant="simple" size="md">
                 <Thead>
                   <Tr>
-                    <Th>Title</Th>
-                    <Th>Property No</Th>
-                    <Th>Type</Th>
-                    <Th>Status</Th>
-                    <Th>Listing</Th>
-                    <Th>Rate</Th>
-                    <Th>Location</Th>
-                    <Th>Actions</Th>
+                    <Th width="20%">Title</Th>
+                    <Th width="10%">Property No</Th>
+                    <Th width="10%">Type</Th>
+                    <Th width="10%">Subtype</Th>
+                    <Th width="10%">Status</Th>
+                    <Th width="10%">Listing</Th>
+                    <Th width="10%">Rate</Th>
+                    <Th width="15%">Location</Th>
+                    <Th width="5%">Actions</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
                   {filteredProperties.map((property) => (
                     <Tr 
                       key={property.id}
-                      onClick={() => handleViewProperty(property.id)}
+                      onClick={() => handleView(property.id)}
                       cursor="pointer"
                       _hover={{ bg: 'gray.50' }}
+                      transition="background-color 0.2s"
                     >
-                      <Td fontWeight="medium">{property.title}</Td>
+                      <Td fontWeight="medium" maxW="200px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                        {property.title}
+                      </Td>
                       <Td>{property.propertyNo || 'N/A'}</Td>
                       <Td textTransform="capitalize">{property.propertyType || 'N/A'}</Td>
+                      <Td textTransform="capitalize">{property.propertySubtype || 'N/A'}</Td>
                       <Td>
                         <Badge 
                           colorScheme={getStatusColor(property.propertyStatus)}
                           px={2}
                           py={1}
                           borderRadius="full"
+                          fontSize="xs"
+                          fontWeight="medium"
                         >
                           {property.propertyStatus || 'N/A'}
                         </Badge>
@@ -397,41 +406,50 @@ export default function Properties() {
                           px={2}
                           py={1}
                           borderRadius="full"
+                          fontSize="xs"
+                          fontWeight="medium"
                         >
                           {property.transactionType || 'N/A'}
                         </Badge>
                       </Td>
-                      <Td fontWeight="bold">₹{property.rate}</Td>
-                      <Td>{property.location || 'N/A'}</Td>
+                      <Td fontWeight="bold" color="blue.600">
+                        ₹{property.rate?.toLocaleString('en-IN') || 'N/A'}
+                      </Td>
+                      <Td maxW="150px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                        {property.location || 'N/A'}
+                      </Td>
                       <Td>
-                        <HStack spacing={2}>
-                          <Tooltip label="View Property">
+                        <HStack spacing={2} justify="center">
+                          <Tooltip label="View Property" placement="top">
                             <IconButton
                               size="sm"
                               icon={<Eye size={16} />}
                               colorScheme="gray"
+                              variant="ghost"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleViewProperty(property.id);
+                                handleView(property.id);
                               }}
                             />
                           </Tooltip>
-                          <Tooltip label="Edit Property">
+                          <Tooltip label="Edit Property" placement="top">
                             <IconButton
                               size="sm"
                               icon={<Edit2 size={16} />}
                               colorScheme="blue"
+                              variant="ghost"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleEditProperty(property);
+                                handleEdit(property.id);
                               }}
                             />
                           </Tooltip>
-                          <Tooltip label="Delete Property">
+                          <Tooltip label="Delete Property" placement="top">
                             <IconButton
                               size="sm"
                               icon={<Trash2 size={16} />}
                               colorScheme="red"
+                              variant="ghost"
                               onClick={(e) => handleDeleteClick(property, e)}
                             />
                           </Tooltip>
