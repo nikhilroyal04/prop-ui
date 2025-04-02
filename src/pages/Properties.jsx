@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Building, Loader2, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building, Loader2, Edit2, Trash2, ChevronLeft, ChevronRight, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import {
   Grid,
   GridItem,
@@ -23,6 +23,16 @@ import {
   Image,
   AspectRatio,
   IconButton,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Select,
+  HStack,
+  VStack,
+  Collapse,
+  FormControl,
+  FormLabel,
+  FormErrorMessage,
 } from '@chakra-ui/react';
 import {
   selectProperties,
@@ -36,72 +46,13 @@ import {
 import AddProperty from './AddProperty';
 
 
-// const properties = [
-//   {
-//     title: 'Luxury Villa in Bali',
-//     price: '500000',
-//     location: 'Bali, Indonesia',
-//     landMark: 'Near Ubud Monkey Forest',
-//     bedrooms: '4',
-//     bathrooms: '3',
-//     area: '2500 sq. ft.',
-//     images: [
-//       'https://dummyimage.com/600x400/000/fff&text=Image+1',
-//       'https://dummyimage.com/600x400/000/fff&text=Image+2',
-//       'https://dummyimage.com/600x400/000/fff&text=Image+3',
-//     ],
-//     description: 'A luxurious villa with a private pool, modern amenities, and stunning views of the Balinese landscape.',
-//     societyName: 'Bali Luxury Estates',
-//     propertyType: 'Villa',
-//     propertyStatus: 'For Sale',
-//     propertyAge: '5 years',
-//     propertyFacing: 'North',
-//   },
-//   {
-//     title: 'Modern Apartment in New York',
-//     price: '750000',
-//     location: 'New York, USA',
-//     landMark: 'Near Central Park',
-//     bedrooms: '3',
-//     bathrooms: '2',
-//     area: '1800 sq. ft.',
-//     images: [
-//       'https://dummyimage.com/600x400/000/fff&text=Image+4',
-//       'https://dummyimage.com/600x400/000/fff&text=Image+5',
-//       'https://dummyimage.com/600x400/000/fff&text=Image+6',
-//     ],
-//     description: 'A modern apartment in the heart of New York City, close to Central Park and major attractions.',
-//     societyName: 'Manhattan Heights',
-//     propertyType: 'Apartment',
-//     propertyStatus: 'For Sale',
-//     propertyAge: '2 years',
-//     propertyFacing: 'East',
-//   },
-//   {
-//     title: 'Beach House in Malibu',
-//     price: '1200000',
-//     location: 'Malibu, California',
-//     landMark: 'Near Malibu Beach',
-//     bedrooms: '5',
-//     bathrooms: '4',
-//     area: '3500 sq. ft.',
-//     images: [
-//       'https://dummyimage.com/600x400/000/fff&text=Image+7',
-//       'https://dummyimage.com/600x400/000/fff&text=Image+8',
-//       'https://dummyimage.com/600x400/000/fff&text=Image+9',
-//     ],
-//     description: 'A stunning beach house with ocean views, private beach access, and luxurious interiors.',
-//     societyName: 'Malibu Beach Residences',
-//     propertyType: 'Beach House',
-//     propertyStatus: 'For Sale',
-//     propertyAge: '10 years',
-//     propertyFacing: 'West',
-//   },
-// ];
-
 export default function Properties() {
   const dispatch = useDispatch();
-  const toast = useToast();
+  const toast = useToast({
+    position: 'top-right',
+    duration: 3000,
+    isClosable: true,
+  });
   const { isOpen, onOpen, onClose } = useDisclosure();
   
   const loading = useSelector(selectLoading);
@@ -115,15 +66,143 @@ export default function Properties() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentPropertyIndex, setCurrentPropertyIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchField, setSearchField] = useState('title');
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    propertyType: '',
+    propertySubtype: '',
+    transactionType: '',
+    minRate: '',
+    maxRate: '',
+    location: '',
+    propertyNo: '',
+  });
+  const [filteredProperties, setFilteredProperties] = useState([]);
 
   useEffect(() => {
     dispatch(fetchProperties());
   }, [dispatch]);
 
+  // Filter properties based on search query and filters
+  useEffect(() => {
+    if (!properties || properties.length === 0) {
+      setFilteredProperties([]);
+      return;
+    }
+
+    let filtered = [...properties];
+
+    // Apply basic search
+    if (searchQuery) {
+      filtered = filtered.filter(property => {
+        const fieldValue = property[searchField]?.toString().toLowerCase() || '';
+        return fieldValue.includes(searchQuery.toLowerCase());
+      });
+    }
+
+    // Apply advanced filters
+    if (advancedFilters.propertyType) {
+      filtered = filtered.filter(property => 
+        property.propertyType === advancedFilters.propertyType
+      );
+    }
+
+    if (advancedFilters.propertySubtype) {
+      filtered = filtered.filter(property => 
+        property.propertySubtype === advancedFilters.propertySubtype
+      );
+    }
+
+    if (advancedFilters.transactionType) {
+      filtered = filtered.filter(property => 
+        property.transactionType === advancedFilters.transactionType
+      );
+    }
+
+    if (advancedFilters.minRate) {
+      filtered = filtered.filter(property => {
+        const rate = parseFloat(property.rate?.replace(/[^0-9.]/g, '') || 0);
+        return rate >= parseFloat(advancedFilters.minRate);
+      });
+    }
+
+    if (advancedFilters.maxRate) {
+      filtered = filtered.filter(property => {
+        const rate = parseFloat(property.rate?.replace(/[^0-9.]/g, '') || 0);
+        return rate <= parseFloat(advancedFilters.maxRate);
+      });
+    }
+
+    if (advancedFilters.location) {
+      filtered = filtered.filter(property => 
+        property.location?.toLowerCase().includes(advancedFilters.location.toLowerCase())
+      );
+    }
+
+    if (advancedFilters.propertyNo) {
+      filtered = filtered.filter(property => 
+        property.propertyNo?.toLowerCase().includes(advancedFilters.propertyNo.toLowerCase())
+      );
+    }
+
+    setFilteredProperties(filtered);
+    
+    // Reset current property index if it's out of bounds
+    if (currentPropertyIndex >= filtered.length) {
+      setCurrentPropertyIndex(0);
+    }
+  }, [properties, searchQuery, searchField, advancedFilters, currentPropertyIndex]);
+
+  // Handle advanced filter changes
+  const handleAdvancedFilterChange = (e) => {
+    const { name, value } = e.target;
+    setAdvancedFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSearchField('title');
+    setAdvancedFilters({
+      propertyType: '',
+      propertySubtype: '',
+      transactionType: '',
+      minRate: '',
+      maxRate: '',
+      location: '',
+      propertyNo: '',
+    });
+  };
+
   const handleSubmit = async (formData) => {
     try {
       setIsSubmitting(true);
+      
+      // Log the form data for debugging
+      console.log("Form data received:", formData);
+      
+      // Check if formData is empty
+      if (!formData || (formData instanceof FormData && formData.entries().next().done)) {
+        toast({
+          title: "Error",
+          description: "No data to submit. Please fill in at least one field.",
+          status: "error",
+          duration: 3000,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
       if (isEditing && selectedProperty) {
+        // Log the data being sent for debugging
+        console.log("Updating property with ID:", selectedProperty.id);
+        
         await dispatch(updateProperty(selectedProperty.id, formData));
         toast({
           title: "Property updated",
@@ -131,6 +210,9 @@ export default function Properties() {
           duration: 3000,
         });
       } else {
+        // Log the data being sent for debugging
+        console.log("Creating new property");
+        
         await dispatch(createProperty(formData));
         toast({
           title: "Property created",
@@ -142,6 +224,7 @@ export default function Properties() {
       await dispatch(fetchProperties());
       handleReset();
     } catch (err) {
+      console.error("Error in handleSubmit:", err);
       toast({
         title: "Error",
         description: err.message,
@@ -270,11 +353,202 @@ export default function Properties() {
 
   return (
     <Box p={6} height={["auto", "auto", "100vh"]} overflow="hidden">
+      {/* Search Bar */}
+      <Card mb={6}>
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <HStack>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <Search color="gray.300" />
+                </InputLeftElement>
+                <Input
+                  placeholder="Search properties..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </InputGroup>
+              <Select
+                value={searchField}
+                onChange={(e) => setSearchField(e.target.value)}
+                width="200px"
+              >
+                <option value="title">Title</option>
+                <option value="propertyNo">Property Number</option>
+                <option value="location">Location</option>
+                <option value="ownerName">Owner Name</option>
+                <option value="description">Description</option>
+                <option value="amenities">Amenities</option>
+              </Select>
+              <Button
+                onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                variant="outline"
+                rightIcon={showAdvancedSearch ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                
+              >
+                {showAdvancedSearch ? 'Hide' : 'Filters'}
+              </Button>
+              <Button
+                onClick={resetFilters}
+                variant="ghost"
+                colorScheme="red"
+              >
+                Reset
+              </Button>
+            </HStack>
+
+            <Collapse in={showAdvancedSearch} animateOpacity>
+              <Box p={4} borderWidth={1} borderRadius="md" bg="gray.50">
+                <Heading size="sm" mb={4}>Advanced Filters</Heading>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Property Number</FormLabel>
+                      <Input
+                        name="propertyNo"
+                        value={advancedFilters.propertyNo}
+                        onChange={handleAdvancedFilterChange}
+                        placeholder="Enter property number"
+                      />
+                    </FormControl>
+                  </GridItem>
+
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Property Type</FormLabel>
+                      <Select
+                        name="propertyType"
+                        value={advancedFilters.propertyType}
+                        onChange={handleAdvancedFilterChange}
+                      >
+                        <option value="">All Types</option>
+                        <option value="residential">Residential</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="industrial">Industrial</option>
+                        <option value="agricultural">Agricultural</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
+
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Property Subtype</FormLabel>
+                      <Select
+                        name="propertySubtype"
+                        value={advancedFilters.propertySubtype}
+                        onChange={handleAdvancedFilterChange}
+                      >
+                        <option value="">All Subtypes</option>
+                        {advancedFilters.propertyType === 'residential' && (
+                          <>
+                            <option value="apartment">Apartment</option>
+                            <option value="villa">Villa</option>
+                            <option value="duplex">Duplex</option>
+                            <option value="triplex">Triplex</option>
+                            <option value="penthouse">Penthouse</option>
+                            <option value="studio">Studio Apartment</option>
+                            <option value="plot">Plot</option>
+                            <option value="house">Independent House</option>
+                            <option value="pg">PG/Hostel</option>
+                          </>
+                        )}
+                        {advancedFilters.propertyType === 'commercial' && (
+                          <>
+                            <option value="office">Office Space</option>
+                            <option value="retail">Retail Shop</option>
+                            <option value="warehouse">Warehouse</option>
+                            <option value="showroom">Showroom</option>
+                            <option value="commercialPlot">Commercial Plot</option>
+                            <option value="hotel">Hotel</option>
+                            <option value="restaurant">Restaurant</option>
+                            <option value="school">School</option>
+                            <option value="college">College</option>
+                            <option value="hospital">Hospital</option>
+                          </>
+                        )}
+                        {advancedFilters.propertyType === 'industrial' && (
+                          <>
+                            <option value="factory">Factory</option>
+                            <option value="industrialPlot">Industrial Plot</option>
+                            <option value="industrialShed">Industrial Shed</option>
+                            <option value="warehouse">Warehouse</option>
+                          </>
+                        )}
+                        {advancedFilters.propertyType === 'agricultural' && (
+                          <>
+                            <option value="farm">Farm</option>
+                            <option value="orchard">Orchard</option>
+                            <option value="plantation">Plantation</option>
+                            <option value="agriculturalPlot">Agricultural Plot</option>
+                          </>
+                        )}
+                      </Select>
+                    </FormControl>
+                  </GridItem>
+
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Transaction Type</FormLabel>
+                      <Select
+                        name="transactionType"
+                        value={advancedFilters.transactionType}
+                        onChange={handleAdvancedFilterChange}
+                      >
+                        <option value="">All Types</option>
+                        <option value="sale">For Sale</option>
+                        <option value="rent">For Rent</option>
+                        <option value="lease">For Lease</option>
+                      </Select>
+                    </FormControl>
+                  </GridItem>
+
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Min Rate</FormLabel>
+                      <Input
+                        name="minRate"
+                        value={advancedFilters.minRate}
+                        onChange={handleAdvancedFilterChange}
+                        placeholder="Min price"
+                      />
+                    </FormControl>
+                  </GridItem>
+
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Max Rate</FormLabel>
+                      <Input
+                        name="maxRate"
+                        value={advancedFilters.maxRate}
+                        onChange={handleAdvancedFilterChange}
+                        placeholder="Max price"
+                      />
+                    </FormControl>
+                  </GridItem>
+
+                  <GridItem>
+                    <FormControl>
+                      <FormLabel>Location</FormLabel>
+                      <Input
+                        name="location"
+                        value={advancedFilters.location}
+                        onChange={handleAdvancedFilterChange}
+                        placeholder="Enter location"
+                      />
+                    </FormControl>
+                  </GridItem>
+                </Grid>
+              </Box>
+            </Collapse>
+          </VStack>
+        </CardBody>
+      </Card>
+
       <Grid 
         templateColumns={["1fr", "1fr", "repeat(2, 1fr)"]}
         templateRows={["auto auto", "auto auto", "1fr"]}
         gap={6} 
-        height={["auto", "auto", "calc(100vh - 48px)"]}
+        height={["auto", "auto", "calc(100vh - 150px)"]}
       >
         {/* Property View - Full width on small screens */}
         <GridItem 
@@ -285,31 +559,31 @@ export default function Properties() {
           <Card height={["auto", "auto", "full"]}>
             <CardBody display="flex" flexDirection="column" overflow={["visible", "visible", "hidden"]}>
               <Flex justify="space-between" align="center" mb={4}>
-                <Heading size="md">Properties ({properties?.length || 0})</Heading>
-                {properties.length > 0 && (
+                <Heading size="md">Properties ({filteredProperties?.length || 0})</Heading>
+                {filteredProperties.length > 0 && (
                   <Text>
-                    Property {currentPropertyIndex + 1} of {properties.length}
+                    Property {currentPropertyIndex + 1} of {filteredProperties.length}
                   </Text>
                 )}
               </Flex>
 
-              {properties.length > 0 ? (
+              {filteredProperties.length > 0 ? (
                 <Box flex="1" overflow={["visible", "visible", "auto"]}>
                   <Card variant="outline">
                     <CardBody>
                       {/* Image/Video Carousel */}
                       <Box mb={4} position="relative" borderRadius="md" overflow="hidden">
                         <AspectRatio ratio={16/9}>
-                          {properties[currentPropertyIndex].images && properties[currentPropertyIndex].images.length > 0 ? (
-                            currentImageIndex < properties[currentPropertyIndex].images.length ? (
+                          {filteredProperties[currentPropertyIndex].images && filteredProperties[currentPropertyIndex].images.length > 0 ? (
+                            currentImageIndex < filteredProperties[currentPropertyIndex].images.length ? (
                               <Image
-                                src={properties[currentPropertyIndex].images[currentImageIndex]}
-                                alt={properties[currentPropertyIndex].title}
+                                src={filteredProperties[currentPropertyIndex].images[currentImageIndex]}
+                                alt={filteredProperties[currentPropertyIndex].title}
                                 objectFit="cover"
                               />
-                            ) : properties[currentPropertyIndex].videos && properties[currentPropertyIndex].videos.length > 0 ? (
+                            ) : filteredProperties[currentPropertyIndex].videos && filteredProperties[currentPropertyIndex].videos.length > 0 ? (
                               <video
-                                src={properties[currentPropertyIndex].videos[currentImageIndex - properties[currentPropertyIndex].images.length]}
+                                src={filteredProperties[currentPropertyIndex].videos[currentImageIndex - filteredProperties[currentPropertyIndex].images.length]}
                                 controls
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                               />
@@ -318,9 +592,9 @@ export default function Properties() {
                                 <Building size={60} />
                               </Box>
                             )
-                          ) : properties[currentPropertyIndex].videos && properties[currentPropertyIndex].videos.length > 0 ? (
+                          ) : filteredProperties[currentPropertyIndex].videos && filteredProperties[currentPropertyIndex].videos.length > 0 ? (
                             <video
-                              src={properties[currentPropertyIndex].videos[currentImageIndex]}
+                              src={filteredProperties[currentPropertyIndex].videos[currentImageIndex]}
                               controls
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
@@ -332,8 +606,8 @@ export default function Properties() {
                         </AspectRatio>
                         
                         {/* Image/Video Navigation */}
-                        {((properties[currentPropertyIndex].images && properties[currentPropertyIndex].images.length > 0) ||
-                          (properties[currentPropertyIndex].videos && properties[currentPropertyIndex].videos.length > 0)) && (
+                        {((filteredProperties[currentPropertyIndex].images && filteredProperties[currentPropertyIndex].images.length > 0) ||
+                          (filteredProperties[currentPropertyIndex].videos && filteredProperties[currentPropertyIndex].videos.length > 0)) && (
                           <>
                             <IconButton
                               icon={<ChevronLeft size={20} />}
@@ -361,8 +635,8 @@ export default function Properties() {
                               size="sm"
                               isDisabled={
                                 currentImageIndex >= (
-                                  (properties[currentPropertyIndex].images?.length || 0) +
-                                  (properties[currentPropertyIndex].videos?.length || 0) - 1
+                                  (filteredProperties[currentPropertyIndex].images?.length || 0) +
+                                  (filteredProperties[currentPropertyIndex].videos?.length || 0) - 1
                                 )
                               }
                             />
@@ -377,7 +651,7 @@ export default function Properties() {
                               borderRadius="md"
                               fontSize="sm"
                             >
-                              {currentImageIndex + 1} / {(properties[currentPropertyIndex].images?.length || 0) + (properties[currentPropertyIndex].videos?.length || 0)}
+                              {currentImageIndex + 1} / {(filteredProperties[currentPropertyIndex].images?.length || 0) + (filteredProperties[currentPropertyIndex].videos?.length || 0)}
                             </Text>
                           </>
                         )}
@@ -385,30 +659,34 @@ export default function Properties() {
 
                       {/* Property Details */}
                       <Box>
-                        <Heading size="lg" mb={4}>{properties[currentPropertyIndex].title}</Heading>
+                        <Heading size="lg" mb={4}>{filteredProperties[currentPropertyIndex].title}</Heading>
                         <Text fontSize="2xl" fontWeight="bold" color="blue.500" mb={6}>
-                          ₹{properties[currentPropertyIndex].priceBreakup}
+                          ₹{filteredProperties[currentPropertyIndex].rate}
                         </Text>
                         
                         <Grid templateColumns={["1fr", "repeat(2, 1fr)"]} gap={4} mb={6}>
                           {/* Essential Property Details */}
                           <Box>
+                            <Text fontWeight="bold">Property Number</Text>
+                            <Text>{filteredProperties[currentPropertyIndex].propertyNo || 'N/A'}</Text>
+                          </Box>
+                          <Box>
                             <Text fontWeight="bold">Property Type</Text>
-                            <Text textTransform="capitalize">{properties[currentPropertyIndex].propertyType || 'N/A'}</Text>
+                            <Text textTransform="capitalize">{filteredProperties[currentPropertyIndex].propertyType || 'N/A'}</Text>
                           </Box>
                           <Box>
                             <Text fontWeight="bold">Property Subtype</Text>
-                            <Text textTransform="capitalize">{properties[currentPropertyIndex].propertySubtype || 'N/A'}</Text>
+                            <Text textTransform="capitalize">{filteredProperties[currentPropertyIndex].propertySubtype || 'N/A'}</Text>
                           </Box>
                           <Box>
-                            <Text fontWeight="bold">Property Choice</Text>
-                            <Text textTransform="capitalize">{properties[currentPropertyIndex].propertyChoice?.replace(/([A-Z])/g, ' $1') || 'N/A'}</Text>
+                            <Text fontWeight="bold">Transaction Type</Text>
+                            <Text textTransform="capitalize">{filteredProperties[currentPropertyIndex].transactionType?.replace(/([A-Z])/g, ' $1') || 'N/A'}</Text>
                           </Box>
                           <Box>
                             <Text fontWeight="bold">Carpet Area</Text>
                             <Text>
-                              {properties[currentPropertyIndex].carpetArea 
-                                ? `${properties[currentPropertyIndex].carpetArea} ${properties[currentPropertyIndex].carpetAreaUnit?.toUpperCase() || 'SQFT'}`
+                              {filteredProperties[currentPropertyIndex].carpetArea 
+                                ? `${filteredProperties[currentPropertyIndex].carpetArea} ${filteredProperties[currentPropertyIndex].carpetAreaUnit?.toUpperCase() || 'SQFT'}`
                                 : 'N/A'
                               }
                             </Text>
@@ -417,75 +695,75 @@ export default function Properties() {
                           {/* Location */}
                           <Box>
                             <Text fontWeight="bold">Location</Text>
-                            <Text textTransform="capitalize">{properties[currentPropertyIndex].location || 'N/A'}</Text>
+                            <Text textTransform="capitalize">{filteredProperties[currentPropertyIndex].location || 'N/A'}</Text>
                           </Box>
-                          {properties[currentPropertyIndex].landmark && (
+                          {filteredProperties[currentPropertyIndex].landmark && (
                             <Box>
                               <Text fontWeight="bold">Landmark</Text>
-                              <Text>{properties[currentPropertyIndex].landmark}</Text>
+                              <Text>{filteredProperties[currentPropertyIndex].landmark}</Text>
                             </Box>
                           )}
 
                           {/* Ownership Details */}
                           <Box>
-                            <Text fontWeight="bold">Type of Ownership</Text>
-                            <Text textTransform="capitalize">{properties[currentPropertyIndex].typeOfOwnership || 'N/A'}</Text>
+                            <Text fontWeight="bold">Loan Available</Text>
+                            <Text textTransform="capitalize">{filteredProperties[currentPropertyIndex].loanAvailable || 'N/A'}</Text>
                           </Box>
-                          {properties[currentPropertyIndex].loanAvailable === 'yes' && (
+                          {filteredProperties[currentPropertyIndex].loanAvailable === 'yes' && (
                             <Box>
                               <Text fontWeight="bold">Bank Name</Text>
-                              <Text>{properties[currentPropertyIndex].bankName || 'N/A'}</Text>
+                              <Text>{filteredProperties[currentPropertyIndex].bankName || 'N/A'}</Text>
                             </Box>
                           )}
-                          {properties[currentPropertyIndex].reraApproved === 'yes' && (
+                          {filteredProperties[currentPropertyIndex].reraApproved === 'yes' && (
                             <Box>
                               <Text fontWeight="bold">RERA Number</Text>
-                              <Text>{properties[currentPropertyIndex].reraNumber}</Text>
+                              <Text>{filteredProperties[currentPropertyIndex].reraNumber}</Text>
                             </Box>
                           )}
 
                           {/* Property Features */}
-                          {properties[currentPropertyIndex].bedrooms && (
+                          {filteredProperties[currentPropertyIndex].bedrooms && (
                             <Box>
                               <Text fontWeight="bold">Bedrooms</Text>
-                              <Text>{properties[currentPropertyIndex].bedrooms}</Text>
+                              <Text>{filteredProperties[currentPropertyIndex].bedrooms}</Text>
                             </Box>
                           )}
-                          {properties[currentPropertyIndex].bathrooms && (
+                          {filteredProperties[currentPropertyIndex].bathrooms && (
                             <Box>
                               <Text fontWeight="bold">Bathrooms</Text>
-                              <Text>{properties[currentPropertyIndex].bathrooms}</Text>
+                              <Text>{filteredProperties[currentPropertyIndex].bathrooms}</Text>
                             </Box>
                           )}
-                          {properties[currentPropertyIndex].facing && (
+                          {filteredProperties[currentPropertyIndex].facing && (
                             <Box>
                               <Text fontWeight="bold">Facing</Text>
-                              <Text textTransform="capitalize">{properties[currentPropertyIndex].facing}</Text>
+                              <Text textTransform="capitalize">{filteredProperties[currentPropertyIndex].facing}</Text>
                             </Box>
                           )}
-                          {properties[currentPropertyIndex].amenities && (
+                          {filteredProperties[currentPropertyIndex].amenities && (
                             <Box>
                               <Text fontWeight="bold">Amenities</Text>
-                              <Text>{properties[currentPropertyIndex].amenities}</Text>
+                              <Text>{filteredProperties[currentPropertyIndex].amenities}</Text>
                             </Box>
                           )}
 
                           {/* Contact Details */}
                           <Box>
                             <Text fontWeight="bold">Owner Name</Text>
-                            <Text>{properties[currentPropertyIndex].ownerName || 'N/A'}</Text>
+                            <Text>{filteredProperties[currentPropertyIndex].ownerName || 'N/A'}</Text>
                           </Box>
                           <Box>
                             <Text fontWeight="bold">Owner Contact</Text>
-                            <Text>{properties[currentPropertyIndex].ownerContactNo || 'N/A'}</Text>
+                            <Text>{filteredProperties[currentPropertyIndex].ownerContactNo || 'N/A'}</Text>
                           </Box>
                         </Grid>
 
                         {/* Description */}
-                        {properties[currentPropertyIndex].description && (
+                        {filteredProperties[currentPropertyIndex].description && (
                           <Box mb={6}>
                             <Text fontWeight="bold" mb={2}>Description</Text>
-                            <Text>{properties[currentPropertyIndex].description}</Text>
+                            <Text>{filteredProperties[currentPropertyIndex].description}</Text>
                           </Box>
                         )}
 
@@ -494,7 +772,7 @@ export default function Properties() {
                           <Button
                             leftIcon={<Edit2 size={16} />}
                             colorScheme="blue"
-                            onClick={() => handleEditProperty(properties[currentPropertyIndex])}
+                            onClick={() => handleEditProperty(filteredProperties[currentPropertyIndex])}
                             flex="1"
                           >
                             Edit
@@ -502,7 +780,7 @@ export default function Properties() {
                           <Button
                             leftIcon={<Trash2 size={16} />}
                             colorScheme="red"
-                            onClick={(e) => handleDeleteClick(properties[currentPropertyIndex], e)}
+                            onClick={(e) => handleDeleteClick(filteredProperties[currentPropertyIndex], e)}
                             flex="1"
                           >
                             Delete
@@ -525,7 +803,7 @@ export default function Properties() {
               )}
 
               {/* Navigation Controls - Only show if there are properties */}
-              {properties.length > 0 && (
+              {filteredProperties.length > 0 && (
                 <Flex 
                   justify="space-between" 
                   align="center" 
@@ -544,12 +822,12 @@ export default function Properties() {
                     Previous Property
                   </Button>
                   <Text fontSize="sm" color="gray.600" order={["-1", "0"]}>
-                    Property {currentPropertyIndex + 1} of {properties.length}
+                    Property {currentPropertyIndex + 1} of {filteredProperties.length}
                   </Text>
                   <Button
                     rightIcon={<ChevronRight size={20} />}
                     onClick={handleNextProperty}
-                    isDisabled={currentPropertyIndex === properties.length - 1}
+                    isDisabled={currentPropertyIndex === filteredProperties.length - 1}
                     size="lg"
                     variant="ghost"
                     width={["full", "auto"]}

@@ -10,7 +10,6 @@ import { Provider } from "react-redux";
 const root = createRoot(document.getElementById("root"));
 
 root.render(
-  <StrictMode>
     <ChakraProvider>
       <Provider store={store}>
         <BrowserRouter>
@@ -18,5 +17,4 @@ root.render(
         </BrowserRouter>
       </Provider>
     </ChakraProvider>
-  </StrictMode>
 );

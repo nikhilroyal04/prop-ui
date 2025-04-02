@@ -6,11 +6,11 @@ import Footer from '../components/Footer';
 export default function RootLayout() {
   return (
     <Flex minH="100vh" direction="column">
-      <Header />
+      {/* <Header /> */}
       <Box flex="1" as="main">
         <Outlet />
       </Box>
-      <Footer />
+      {/* <Footer /> */}
     </Flex>
   );
 } 

@@ -15,6 +15,10 @@ import {
   AspectRatio,
   Image,
   Textarea,
+  Grid,
+  GridItem,
+  useToast,
+  FormErrorMessage,
 } from '@chakra-ui/react';
 import { X, Plus } from 'lucide-react';
 
@@ -24,7 +28,8 @@ const initialFormState = {
   description: '',
   propertyType: '',
   propertySubtype: '',
-  propertyChoice: '',
+  propertyStatus: '',
+  transactionType: '', // Buy or Rent
   carpetArea: '',
   carpetAreaUnit: 'sqft',
   ageOfConstruction: '',
@@ -35,8 +40,7 @@ const initialFormState = {
   googleMapsUrl: '',
 
   // Pricing & Ownership
-  priceBreakup: '',
-  typeOfOwnership: '',
+  rate: '', // Renamed from priceBreakup
   loanAvailable: 'no',
   bankName: '',
   reraApproved: 'no',
@@ -99,8 +103,14 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
     return [];
   });
 
+  const [errors, setErrors] = useState({});
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
+  const toast = useToast({
+    position: 'top-right',
+    duration: 3000,
+    isClosable: true,
+  });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -220,8 +230,33 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
     setVideoPreviewUrls(newPreviewUrls);
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const clearForm = () => {
+    setFormData(initialFormState);
+    setImagePreviewUrls([]);
+    setVideoPreviewUrls([]);
+    setErrors({});
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please check all required fields",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     const submitData = new FormData();
 
     Object.keys(formData).forEach(key => {
@@ -238,11 +273,25 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
       if (video instanceof File) {
         submitData.append('videos', video);
       } else {
-        submitData.append(`videoUrls[${index}]`, video);
+        submitData.append(`videos[${index}]`, video);
       }
     });
 
-    onSubmit(submitData);
+    try {
+      await onSubmit(submitData);
+      
+      if (!isEditing) {
+        clearForm();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const imageUploadSection = (
@@ -437,6 +486,17 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
     }
   }, [initialData]);
 
+  // Update FormControl components to show errors
+  const renderFormControl = (name, label, children, isRequired = false) => (
+    <FormControl isRequired={isRequired} isInvalid={!!errors[name]}>
+      <FormLabel>{label}</FormLabel>
+      {children}
+      {errors[name] && (
+        <FormErrorMessage>{errors[name]}</FormErrorMessage>
+      )}
+    </FormControl>
+  );
+
   return (
     <Box flex="1" overflowY="auto" pr={2}>
       <form onSubmit={handleSubmit}>
@@ -444,386 +504,453 @@ export default function AddProperty({ onSubmit, isEditing, initialData, onCancel
           {/* 1. Basic Property Details */}
           <Box>
             <Heading size="sm" mb={4}>Basic Property Details</Heading>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Property Title</FormLabel>
-                <Input
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  placeholder="Enter property title"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Description</FormLabel>
-                <Textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Enter property description"
-                  minH="150px"
-                  resize="vertical"
-                />
-              </FormControl>
-
-              <FormControl isRequired>
-                <FormLabel>Property Type</FormLabel>
-                <Select
-                  name="propertyType"
-                  value={formData.propertyType}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Property Type</option>
-                  <option value="residential">Residential</option>
-                  <option value="commercial">Commercial</option>
-                  <option value="industrial">Industrial</option>
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Property Subtype</FormLabel>
-                <Select
-                  name="propertySubtype"
-                  value={formData.propertySubtype}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Subtype</option>
-                  {formData.propertyType === 'residential' && (
-                    <>
-                      <option value="apartment">Apartment</option>
-                      <option value="villa">Villa</option>
-                      <option value="duplex">Duplex</option>
-                      <option value="triplex">Triplex</option>
-                      <option value="penthouse">Penthouse</option>
-                      <option value="studio">Studio Apartment</option>
-                      <option value="plot">Plot</option>
-                      <option value="house">Independent House</option>
-                    </>
-                  )}
-                  {formData.propertyType === 'commercial' && (
-                    <>
-                      <option value="office">Office Space</option>
-                      <option value="retail">Retail Shop</option>
-                      <option value="warehouse">Warehouse</option>
-                      <option value="showroom">Showroom</option>
-                      <option value="commercialPlot">Commercial Plot</option>
-                    </>
-                  )}
-                  {formData.propertyType === 'industrial' && (
-                    <>
-                      <option value="factory">Factory</option>
-                      <option value="industrialPlot">Industrial Plot</option>
-                      <option value="industrialShed">Industrial Shed</option>
-                    </>
-                  )}
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Property Choice</FormLabel>
-                <Select
-                  name="propertyChoice"
-                  value={formData.propertyChoice}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Choice</option>
-                  <option value="ready">Ready to Move</option>
-                  <option value="underConstruction">Under Construction</option>
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Carpet Area</FormLabel>
-                <Flex gap={2}>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+              <GridItem gridColumn={{ base: "1", md: "1 / -1" }}>
+                {renderFormControl('title', 'Property Title', (
                   <Input
-                    name="carpetArea"
-                    value={formData.carpetArea}
+                    name="title"
+                    value={formData.title}
                     onChange={handleInputChange}
-                    type="number"
-                    placeholder="Enter area"
-                    flex="1"
+                    placeholder="Enter property title"
                   />
-                  <Select
-                    name="carpetAreaUnit"
-                    value={formData.carpetAreaUnit}
-                    onChange={handleInputChange}
-                    width="120px"
-                  >
-                    <option value="sqft">Sq. Ft.</option>
-                    <option value="sqyd">Sq. Yd.</option>
-                    <option value="sqm">Sq. M.</option>
-                  </Select>
-                </Flex>
-              </FormControl>
+                ), true)}
+              </GridItem>
 
-              <FormControl>
-                <FormLabel>Age of Construction</FormLabel>
-                <Input
-                  name="ageOfConstruction"
-                  value={formData.ageOfConstruction}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 2 years"
-                />
-              </FormControl>
-            </VStack>
+              <GridItem gridColumn={{ base: "1", md: "1 / -1" }}>
+                <FormControl>
+                  <FormLabel>Description</FormLabel>
+                  <Textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Enter property description"
+                    rows={4}
+                  />
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl isRequired>
+                  <FormLabel>Listing Type</FormLabel>
+                  <Select
+                    name="transactionType"
+                    value={formData.transactionType}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Listing Type</option>
+                    <option value="sale">For Sale</option>
+                    <option value="rent">For Rent</option>
+                    <option value="lease">For Lease</option>
+                  </Select>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Property Status</FormLabel>
+                  <Select
+                    name="propertyStatus"
+                    value={formData.propertyStatus}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Status</option>
+                    <option value="ready">Ready to Move</option>
+                    <option value="underConstruction">Under Construction</option>
+                    <option value="newLaunch">New Launch</option>
+                    <option value="resale">Resale</option>
+                  </Select>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Property Type</FormLabel>
+                  <Select
+                    name="propertyType"
+                    value={formData.propertyType}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Property Type</option>
+                    <option value="residential">Residential</option>
+                    <option value="commercial">Commercial</option>
+                    <option value="industrial">Industrial</option>
+                    <option value="agricultural">Agricultural</option>
+                  </Select>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Property Subtype</FormLabel>
+                  <Select
+                    name="propertySubtype"
+                    value={formData.propertySubtype}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Subtype</option>
+                    {formData.propertyType === 'residential' && (
+                      <>
+                        <option value="apartment">Apartment</option>
+                        <option value="villa">Villa</option>
+                        <option value="duplex">Duplex</option>
+                        <option value="triplex">Triplex</option>
+                        <option value="penthouse">Penthouse</option>
+                        <option value="studio">Studio Apartment</option>
+                        <option value="plot">Plot</option>
+                        <option value="house">Independent House</option>
+                        <option value="pg">PG/Hostel</option>
+                      </>
+                    )}
+                    {formData.propertyType === 'commercial' && (
+                      <>
+                        <option value="office">Office Space</option>
+                        <option value="retail">Retail Shop</option>
+                        <option value="warehouse">Warehouse</option>
+                        <option value="showroom">Showroom</option>
+                        <option value="commercialPlot">Commercial Plot</option>
+                        <option value="hotel">Hotel</option>
+                        <option value="restaurant">Restaurant</option>
+                        <option value="school">School</option>
+                        <option value="college">College</option>
+                        <option value="hospital">Hospital</option>
+                      </>
+                    )}
+                    {formData.propertyType === 'industrial' && (
+                      <>
+                        <option value="factory">Factory</option>
+                        <option value="industrialPlot">Industrial Plot</option>
+                        <option value="industrialShed">Industrial Shed</option>
+                        <option value="warehouse">Warehouse</option>
+                      </>
+                    )}
+                    {formData.propertyType === 'agricultural' && (
+                      <>
+                        <option value="farm">Farm</option>
+                        <option value="orchard">Orchard</option>
+                        <option value="plantation">Plantation</option>
+                        <option value="agriculturalPlot">Agricultural Plot</option>
+                      </>
+                    )}
+                  </Select>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Carpet Area</FormLabel>
+                  <Flex gap={2}>
+                    <Input
+                      name="carpetArea"
+                      value={formData.carpetArea}
+                      onChange={handleInputChange}
+                      type="number"
+                      placeholder="Enter area"
+                      flex="1"
+                    />
+                    <Select
+                      name="carpetAreaUnit"
+                      value={formData.carpetAreaUnit}
+                      onChange={handleInputChange}
+                      width="120px"
+                    >
+                      <option value="sqft">Sq. Ft.</option>
+                      <option value="sqyd">Sq. Yd.</option>
+                      <option value="sqm">Sq. M.</option>
+                      <option value="acre">Acre</option>
+                    </Select>
+                  </Flex>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Age of Construction</FormLabel>
+                  <Input
+                    name="ageOfConstruction"
+                    value={formData.ageOfConstruction}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 2 years"
+                  />
+                </FormControl>
+              </GridItem>
+            </Grid>
           </Box>
 
           {/* 2. Location Details */}
           <Box>
             <Heading size="sm" mb={4}>Location Details</Heading>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Location</FormLabel>
-                <Input
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+              <GridItem>
+                {renderFormControl('location', 'Location', (
+                  <Input
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                  />
+                ), true)}
+              </GridItem>
 
-              <FormControl>
-                <FormLabel>Landmark</FormLabel>
-                <Input
-                  name="landmark"
-                  value={formData.landmark}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Landmark</FormLabel>
+                  <Input
+                    name="landmark"
+                    value={formData.landmark}
+                    onChange={handleInputChange}
+                  />
+                </FormControl>
+              </GridItem>
 
-              <FormControl>
-                <FormLabel>Google Maps URL</FormLabel>
-                <Input
-                  name="googleMapsUrl"
-                  value={formData.googleMapsUrl}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
-            </VStack>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Google Maps URL</FormLabel>
+                  <Input
+                    name="googleMapsUrl"
+                    value={formData.googleMapsUrl}
+                    onChange={handleInputChange}
+                  />
+                </FormControl>
+              </GridItem>
+            </Grid>
           </Box>
 
           {/* 3. Pricing & Ownership */}
           <Box>
             <Heading size="sm" mb={4}>Pricing & Ownership</Heading>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Price Breakup</FormLabel>
-                <Input
-                  name="priceBreakup"
-                  value={formData.priceBreakup}
-                  onChange={handleInputChange}
-                  type="text"
-                />
-              </FormControl>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+              <GridItem>
+                {renderFormControl('rate', 'Rate', (
+                  <Input
+                    name="rate"
+                    value={formData.rate}
+                    onChange={handleInputChange}
+                    type="text"
+                  />
+                ), true)}
+              </GridItem>
 
-              <FormControl>
-                <FormLabel>Type of Ownership</FormLabel>
-                <Select
-                  name="typeOfOwnership"
-                  value={formData.typeOfOwnership}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Ownership Type</option>
-                  <option value="freehold">Freehold</option>
-                  <option value="leasehold">Leasehold</option>
-                  <option value="cooperative">Cooperative</option>
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Loan Available</FormLabel>
-                <Select
-                  name="loanAvailable"
-                  value={formData.loanAvailable}
-                  onChange={handleInputChange}
-                >
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </Select>
-              </FormControl>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Loan Available</FormLabel>
+                  <Select
+                    name="loanAvailable"
+                    value={formData.loanAvailable}
+                    onChange={handleInputChange}
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </Select>
+                </FormControl>
+              </GridItem>
 
               {formData.loanAvailable === 'yes' && (
-                <FormControl>
-                  <FormLabel>Bank Name</FormLabel>
-                  <Input
-                    name="bankName"
-                    value={formData.bankName}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Bank Name</FormLabel>
+                    <Input
+                      name="bankName"
+                      value={formData.bankName}
+                      onChange={handleInputChange}
+                    />
+                  </FormControl>
+                </GridItem>
               )}
 
-              <FormControl>
-                <FormLabel>RERA Approved</FormLabel>
-                <Select
-                  name="reraApproved"
-                  value={formData.reraApproved}
-                  onChange={handleInputChange}
-                >
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </Select>
-              </FormControl>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>RERA Approved</FormLabel>
+                  <Select
+                    name="reraApproved"
+                    value={formData.reraApproved}
+                    onChange={handleInputChange}
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </Select>
+                </FormControl>
+              </GridItem>
 
               {formData.reraApproved === 'yes' && (
-                <FormControl>
-                  <FormLabel>RERA Number</FormLabel>
-                  <Input
-                    name="reraNumber"
-                    value={formData.reraNumber}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>RERA Number</FormLabel>
+                    <Input
+                      name="reraNumber"
+                      value={formData.reraNumber}
+                      onChange={handleInputChange}
+                    />
+                  </FormControl>
+                </GridItem>
               )}
-            </VStack>
+            </Grid>
           </Box>
 
           {/* 4. Property Specifications */}
           <Box>
             <Heading size="sm" mb={4}>Property Specifications</Heading>
-            <VStack spacing={4}>
-              <FormControl>
-                <FormLabel>Bedrooms</FormLabel>
-                <Input
-                  name="bedrooms"
-                  value={formData.bedrooms}
-                  onChange={handleInputChange}
-                  type="number"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Bathrooms</FormLabel>
-                <Input
-                  name="bathrooms"
-                  value={formData.bathrooms}
-                  onChange={handleInputChange}
-                  type="number"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Additional Rooms</FormLabel>
-                <Input
-                  name="additionalRooms"
-                  value={formData.additionalRooms}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Study, Pooja Room"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Floors</FormLabel>
-                <Flex gap={2} align="center">
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Bedrooms</FormLabel>
                   <Input
-                    name="currentFloor"
-                    value={formData.currentFloor || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, currentFloor: e.target.value }))}
+                    name="bedrooms"
+                    value={formData.bedrooms}
+                    onChange={handleInputChange}
                     type="number"
-                    placeholder="Current"
-                    width="100px"
                   />
-                  <Text>out of</Text>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Bathrooms</FormLabel>
                   <Input
-                    name="totalFloors"
-                    value={formData.totalFloors || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, totalFloors: e.target.value }))}
+                    name="bathrooms"
+                    value={formData.bathrooms}
+                    onChange={handleInputChange}
                     type="number"
-                    placeholder="Total"
-                    width="100px"
                   />
-                </Flex>
-              </FormControl>
+                </FormControl>
+              </GridItem>
 
-              <FormControl>
-                <FormLabel>Facing</FormLabel>
-                <Select
-                  name="facing"
-                  value={formData.facing}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Facing</option>
-                  <option value="north">North</option>
-                  <option value="north-east">North-East</option>
-                  <option value="east">East</option>
-                  <option value="south-east">South-East</option>
-                  <option value="south">South</option>
-                  <option value="south-west">South-West</option>
-                  <option value="west">West</option>
-                  <option value="north-west">North-West</option>
-                </Select>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Additional Rooms</FormLabel>
+                  <Input
+                    name="additionalRooms"
+                    value={formData.additionalRooms}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Study, Pooja Room"
+                  />
+                </FormControl>
+              </GridItem>
 
-              </FormControl>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Floors</FormLabel>
+                  <Flex gap={2} align="center">
+                    <Input
+                      name="currentFloor"
+                      value={formData.currentFloor || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, currentFloor: e.target.value }))}
+                      type="number"
+                      placeholder="Current"
+                      width="100px"
+                    />
+                    <Text>out of</Text>
+                    <Input
+                      name="totalFloors"
+                      value={formData.totalFloors || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, totalFloors: e.target.value }))}
+                      type="number"
+                      placeholder="Total"
+                      width="100px"
+                    />
+                  </Flex>
+                </FormControl>
+              </GridItem>
 
-              <FormControl>
-                <FormLabel>Amenities</FormLabel>
-                <Input
-                  name="amenities"
-                  value={formData.amenities}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Swimming Pool, Gym"
-                />
-              </FormControl>
-            </VStack>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Facing</FormLabel>
+                  <Select
+                    name="facing"
+                    value={formData.facing}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Facing</option>
+                    <option value="north">North</option>
+                    <option value="north-east">North-East</option>
+                    <option value="east">East</option>
+                    <option value="south-east">South-East</option>
+                    <option value="south">South</option>
+                    <option value="south-west">South-West</option>
+                    <option value="west">West</option>
+                    <option value="north-west">North-West</option>
+                  </Select>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Amenities</FormLabel>
+                  <Textarea
+                    name="amenities"
+                    value={formData.amenities}
+                    onChange={handleInputChange}
+                    placeholder="Enter amenities (e.g., Swimming Pool, Gym, Park, Security)"
+                    rows={4}
+                  />
+                </FormControl>
+              </GridItem>
+            </Grid>
           </Box>
 
           {/* 5. Developer & Project Information */}
           <Box>
             <Heading size="sm" mb={4}>Developer & Project Information</Heading>
-            <VStack spacing={4}>
-              <FormControl>
-                <FormLabel>Developer</FormLabel>
-                <Input
-                  name="developer"
-                  value={formData.developer}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Developer</FormLabel>
+                  <Input
+                    name="developer"
+                    value={formData.developer}
+                    onChange={handleInputChange}
+                  />
+                </FormControl>
+              </GridItem>
 
-              <FormControl>
-                <FormLabel>Project Name</FormLabel>
-                <Input
-                  name="projectName"
-                  value={formData.projectName}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
-            </VStack>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Project Name</FormLabel>
+                  <Input
+                    name="projectName"
+                    value={formData.projectName}
+                    onChange={handleInputChange}
+                  />
+                </FormControl>
+              </GridItem>
+            </Grid>
           </Box>
 
           {/* 6. Owner / Seller Details */}
           <Box>
             <Heading size="sm" mb={4}>Owner / Seller Details</Heading>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Owner Name</FormLabel>
-                <Input
-                  name="ownerName"
-                  value={formData.ownerName}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+              <GridItem>
+                {renderFormControl('ownerName', 'Owner Name', (
+                  <Input
+                    name="ownerName"
+                    value={formData.ownerName}
+                    onChange={handleInputChange}
+                  />
+                ), true)}
+              </GridItem>
 
-              <FormControl isRequired>
-                <FormLabel>Owner Contact No.</FormLabel>
-                <Input
-                  name="ownerContactNo"
-                  value={formData.ownerContactNo}
-                  onChange={handleInputChange}
-                  type="tel"
-                />
-              </FormControl>
+              <GridItem>
+                {renderFormControl('ownerContactNo', 'Owner Contact No.', (
+                  <Input
+                    name="ownerContactNo"
+                    value={formData.ownerContactNo}
+                    onChange={handleInputChange}
+                    type="tel"
+                  />
+                ), true)}
+              </GridItem>
 
-              <FormControl>
-                <FormLabel>Owner Email</FormLabel>
-                <Input
-                  name="ownerEmail"
-                  value={formData.ownerEmail}
-                  onChange={handleInputChange}
-                  type="email"
-                />
-              </FormControl>
-            </VStack>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Owner Email</FormLabel>
+                  <Input
+                    name="ownerEmail"
+                    value={formData.ownerEmail}
+                    onChange={handleInputChange}
+                    type="email"
+                  />
+                </FormControl>
+              </GridItem>
+            </Grid>
           </Box>
 
           {/* 7. Media & Connectivity */}
