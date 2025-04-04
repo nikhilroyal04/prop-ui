@@ -661,7 +661,7 @@ export default function AddProperty() {
   );
 
   // Show loading state
-  if (loading || !property) {
+  if (loading || (isEditing && !property)) {
     return (
       <Box p={6} display="flex" justifyContent="center" alignItems="center" minH="400px">
         <Text>Loading property details...</Text>
