@@ -1150,9 +1150,9 @@ export default function AddProperty() {
                           _hover={{ borderColor: 'orange.400' }}
                           isDisabled={isSubmitting}
                         >
-                          <option value="sqft">Sq. Ft.</option>
-                          <option value="sqyd">Sq. Yd.</option>
-                          <option value="sqm">Sq. M.</option>
+                          <option value="sqft">Square Feet</option>
+                          <option value="sqyd">Square Yard</option>
+                          <option value="sqm">Square Meter</option>
                           <option value="acre">Acre</option>
                         </Select>
                       </Flex>
