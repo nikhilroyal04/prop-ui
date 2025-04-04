@@ -81,6 +81,14 @@ const initialFormState = {
   connectivity: [],
 };
 
+const propertySuggestions = [
+  { title: '1 BHK Flat', bedrooms: '1', bathrooms: '1', propertyType: 'residential', propertySubtype: 'apartment' },
+  { title: '2 BHK Flat', bedrooms: '2', bathrooms: '2', propertyType: 'residential', propertySubtype: 'apartment' },
+  { title: '3 BHK Flat', bedrooms: '3', bathrooms: '3', propertyType: 'residential', propertySubtype: 'apartment' },
+  { title: '4 BHK Flat', bedrooms: '4', bathrooms: '4', propertyType: 'residential', propertySubtype: 'apartment' },
+  { title: 'Studio Apartment', bedrooms: '1', bathrooms: '1', propertyType: 'residential', propertySubtype: 'studio' },
+];
+
 export default function AddProperty() {
   const { id } = useParams();
   const location = useLocation();
@@ -374,6 +382,17 @@ export default function AddProperty() {
     setVideos(newPreviewUrls);
   };
 
+  const handleSuggestionClick = (suggestion) => {
+    setFormData(prev => ({
+      ...prev,
+      title: suggestion.title,
+      bedrooms: suggestion.bedrooms,
+      bathrooms: suggestion.bathrooms,
+      propertyType: suggestion.propertyType,
+      propertySubtype: suggestion.propertySubtype,
+    }));
+  };
+
   const validateForm = () => {
     const newErrors = {};
     
@@ -432,7 +451,7 @@ export default function AddProperty() {
         if (key !== 'images' && key !== 'videos' && key !== 'tempVideoUrl') {
           // Handle arrays by converting to JSON string
           if (Array.isArray(formData[key])) {
-            propertyData.append(key, JSON.stringify(formData[key]));
+            propertyData.append(key, (formData[key]));
           } else {
             propertyData.append(key, formData[key]);
           }
@@ -494,10 +513,10 @@ export default function AddProperty() {
         ref={fileInputRef}
       />
       <Box borderWidth={1} borderRadius="md" p={4}>
-        <SimpleGrid columns={[3, 4, 5]} spacing={3} mb={4}>
+        <SimpleGrid columns={[2, 4, 6]} spacing={3} mb={4}>
           {images?.map((url, index) => (
-            <Box key={index} position="relative">
-              <AspectRatio ratio={4 / 3} maxW="150px">
+            <Box key={index} position="relative" maxW="150px">
+              <AspectRatio ratio={4 / 3}>
                 <Image
                   src={url}
                   alt={`Property image ${index + 1}`}
@@ -531,18 +550,20 @@ export default function AddProperty() {
             </Box>
           ))}
           {images.length < 10 && (
-            <AspectRatio ratio={4 / 3} maxW="150px">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                w="full"
-                h="full"
-                variant="outline"
-                leftIcon={<Plus size={16} />}
-                fontSize="sm"
-              >
-                Add Image
-              </Button>
-            </AspectRatio>
+            <Box maxW="150px">
+              <AspectRatio ratio={4 / 3}>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  w="full"
+                  h="full"
+                  variant="outline"
+                  leftIcon={<Plus size={16} />}
+                  fontSize="sm"
+                >
+                  Add Image
+                </Button>
+              </AspectRatio>
+            </Box>
           )}
         </SimpleGrid>
         <Text fontSize="sm" color="gray.500">
@@ -576,8 +597,8 @@ export default function AddProperty() {
 
         <SimpleGrid columns={[2, 3, 4]} spacing={3} mb={4}>
           {videos?.map((url, index) => (
-            <Box key={index} position="relative">
-              <AspectRatio ratio={16 / 9} maxW="200px">
+            <Box key={index} position="relative" maxW="200px">
+              <AspectRatio ratio={16 / 9}>
                 {typeof videos[index] === 'string' ? (
                   <iframe
                     src={url.replace('watch?v=', 'embed/')}
@@ -619,18 +640,20 @@ export default function AddProperty() {
             </Box>
           ))}
           {videos.length < 5 && (
-            <AspectRatio ratio={16 / 9} maxW="200px">
-              <Button
-                onClick={() => videoInputRef.current?.click()}
-                w="full"
-                h="full"
-                variant="outline"
-                leftIcon={<Plus size={16} />}
-                fontSize="sm"
-              >
-                Add Video
-              </Button>
-            </AspectRatio>
+            <Box maxW="200px">
+              <AspectRatio ratio={16 / 9}>
+                <Button
+                  onClick={() => videoInputRef.current?.click()}
+                  w="full"
+                  h="full"
+                  variant="outline"
+                  leftIcon={<Plus size={16} />}
+                  fontSize="sm"
+                >
+                  Add Video
+                </Button>
+              </AspectRatio>
+            </Box>
           )}
         </SimpleGrid>
       </Box>
@@ -638,7 +661,7 @@ export default function AddProperty() {
   );
 
   // Show loading state
-  if (loading) {
+  if (loading || !property) {
     return (
       <Box p={6} display="flex" justifyContent="center" alignItems="center" minH="400px">
         <Text>Loading property details...</Text>
@@ -655,17 +678,6 @@ export default function AddProperty() {
     );
   }
 
-  // Show not found state
-  if (isEditing && !property) {
-    return (
-      <Box p={6} display="flex" flexDirection="column" alignItems="center" justifyContent="center" minH="400px">
-        <Text color="red.500" mb={4}>Property not found</Text>
-        <Button colorScheme="blue" onClick={() => navigate('/properties')}>
-          Back to Properties
-        </Button>
-      </Box>
-    );
-  }
 
   return (
     <Box p={4}>
@@ -692,15 +704,37 @@ export default function AddProperty() {
                 <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
                   <GridItem colSpan={{ base: 1, md: 2, lg: 3 }}>
                     {renderFormControl('title', 'Property Title', (
-                      <Input
-                        name="title"
-                        value={formData.title || ''}
-                        onChange={handleInputChange}
-                        placeholder="Enter property title"
-                        size="lg"
-                        bg="white"
-                        _hover={{ borderColor: 'blue.400' }}
-                      />
+                      <>
+                        <Input
+                          name="title"
+                          value={formData.title || ''}
+                          onChange={handleInputChange}
+                          placeholder="Enter property title"
+                          size="lg"
+                          bg="white"
+                          _hover={{ borderColor: 'blue.400' }}
+                        />
+                        <Box mt={2}>
+                          <Text fontSize="sm" color="gray.600" mb={2}>Quick Select:</Text>
+                          <Flex gap={2} flexWrap="wrap" maxW="100%" overflowX="hidden">
+                            {propertySuggestions.map((suggestion, index) => (
+                              <Button
+                                key={index}
+                                size="sm"
+                                variant="outline"
+                                colorScheme="blue"
+                                onClick={() => handleSuggestionClick(suggestion)}
+                                _hover={{ bg: 'blue.50' }}
+                                whiteSpace="nowrap"
+                                minW="auto"
+                                px={3}
+                              >
+                                {suggestion.title}
+                              </Button>
+                            ))}
+                          </Flex>
+                        </Box>
+                      </>
                     ), true)}
                   </GridItem>
 

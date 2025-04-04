@@ -70,13 +70,14 @@ import {
   Heart,
   Share2,
 } from 'lucide-react';
-import { selectSelectedProperty, fetchPropertyById } from '../app/features/propertySlice';
+import { selectSelectedProperty, fetchPropertyById, selectLoading } from '../app/features/propertySlice';
 
 export default function PropertyView() {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const property = useSelector(selectSelectedProperty);
+  const loading = useSelector(selectLoading);
   const toast = useToast({
     position: 'top-right',
     duration: 3000,
@@ -122,7 +123,7 @@ export default function PropertyView() {
     navigate(`/properties/edit/${id}`);
   };
 
-  if (!property) {
+  if (loading || !property) {
     return (
       <Container maxW="container.xl" py={8}>
         <Button
