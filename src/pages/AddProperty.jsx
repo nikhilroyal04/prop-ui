@@ -87,6 +87,7 @@ const propertySuggestions = [
   { title: '3 BHK Flat', bedrooms: '3', bathrooms: '3', propertyType: 'residential', propertySubtype: 'apartment' },
   { title: '4 BHK Flat', bedrooms: '4', bathrooms: '4', propertyType: 'residential', propertySubtype: 'apartment' },
   { title: 'Studio Apartment', bedrooms: '1', bathrooms: '1', propertyType: 'residential', propertySubtype: 'studio' },
+  { title: 'Independent House', bedrooms: '3', bathrooms: '3', propertyType: 'residential', propertySubtype: 'house' },
 ];
 
 export default function AddProperty() {
@@ -109,6 +110,22 @@ export default function AddProperty() {
   // Create a function to get initial form data
   const getInitialFormData = () => {
     if (isEditing && property) {
+      // Parse existing ageOfConstruction if it exists
+      let ageYears = '';
+      let ageMonths = '';
+      
+      if (property.ageOfConstruction) {
+        // Try to extract years and months from the existing format
+        const ageMatch = property.ageOfConstruction.match(/(\d+)\s*years?\s*(?:,?\s*(\d+)\s*months?)?/i);
+        if (ageMatch) {
+          ageYears = ageMatch[1] || '';
+          ageMonths = ageMatch[2] || '';
+        } else {
+          // If it doesn't match the pattern, just keep as is in years field
+          ageYears = property.ageOfConstruction;
+        }
+      }
+      
       return {
         ...initialFormState,
         ...property,
@@ -872,8 +889,7 @@ export default function AddProperty() {
                   </GridItem>
 
                   <GridItem colSpan={{ base: 1, md: 2, lg: 3 }}>
-                    <FormControl>
-                      <FormLabel>Description</FormLabel>
+                    {renderFormControl('description', 'Description', (
                       <Textarea
                         name="description"
                         value={formData.description}
@@ -883,7 +899,7 @@ export default function AddProperty() {
                         bg="white"
                         _hover={{ borderColor: 'blue.400' }}
                       />
-                    </FormControl>
+                    ))}
                   </GridItem>
                 </Grid>
               </Box>
@@ -920,8 +936,7 @@ export default function AddProperty() {
                   </GridItem>
 
                   <GridItem colSpan={{ base: 1, md: 2, lg: 3 }}>
-                    <FormControl>
-                      <FormLabel>Google Maps URL</FormLabel>
+                    {renderFormControl('googleMapsUrl', 'Google Maps URL', (
                       <Input
                         name="googleMapsUrl"
                         value={formData.googleMapsUrl}
@@ -930,7 +945,7 @@ export default function AddProperty() {
                         bg="white"
                         _hover={{ borderColor: 'green.400' }}
                       />
-                    </FormControl>
+                    ))}
                   </GridItem>
                 </Grid>
               </Box>
@@ -1199,7 +1214,7 @@ export default function AddProperty() {
                         name="ageOfConstruction"
                         value={formData.ageOfConstruction}
                         onChange={handleInputChange}
-                        placeholder="e.g., 2 years"
+                        placeholder="e.g., 4 years 6 months"
                         bg="white"
                         _hover={{ borderColor: 'orange.400' }}
                         isDisabled={isSubmitting}

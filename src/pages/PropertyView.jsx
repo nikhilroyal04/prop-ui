@@ -367,8 +367,8 @@ export default function PropertyView() {
                       bg={useColorModeValue('gray.50', 'gray.700')}
                       borderRadius="lg"
                     >
-                      <StatLabel>Price per sq ft</StatLabel>
-                      <StatNumber fontSize="xl">{property.priceBreakup || 'N/A'}</StatNumber>
+                      <StatLabel>Rate</StatLabel>
+                      <StatNumber fontSize="xl">{property.rate || 'N/A'}</StatNumber>
                     </Stat>
                     <Stat
                       p={4}
@@ -403,7 +403,7 @@ export default function PropertyView() {
                       borderRadius="lg"
                     >
                       <StatLabel>Age</StatLabel>
-                      <StatNumber fontSize="xl">{property.ageOfConstruction} years</StatNumber>
+                      <StatNumber fontSize="xl">{property.ageOfConstruction}</StatNumber>
                     </Stat>
                   </SimpleGrid>
 
