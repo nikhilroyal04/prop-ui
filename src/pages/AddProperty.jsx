@@ -88,6 +88,8 @@ const propertySuggestions = [
   { title: '4 BHK Flat', bedrooms: '4', bathrooms: '4', propertyType: 'residential', propertySubtype: 'apartment' },
   { title: 'Studio Apartment', bedrooms: '1', bathrooms: '1', propertyType: 'residential', propertySubtype: 'studio' },
   { title: 'Independent House', bedrooms: '3', bathrooms: '3', propertyType: 'residential', propertySubtype: 'house' },
+  { title: 'Office Space', bedrooms: '0', bathrooms: '2', propertyType: 'commercial', propertySubtype: 'office' },
+  { title: 'Agricultural Land', bedrooms: '0', bathrooms: '0', propertyType: 'agricultural', propertySubtype: 'agriculturalPlot' },
 ];
 
 export default function AddProperty() {
